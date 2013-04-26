@@ -1,4 +1,4 @@
 tornado-restless
 ================
 
-Insprired on flask-restless and sqlalchemy api wrapping for tornado
+Insprired on flask-restless this is a sqlalchemy restless api wrapper for tornado
