@@ -22,6 +22,7 @@ class BaseHandler(RequestHandler):
                    allow_patch_many,
                    validation_exceptions,
                    include_columns,
+                   exclude_columns,
                    results_per_page,
                    max_results_per_page):
         """
@@ -32,6 +33,7 @@ class BaseHandler(RequestHandler):
         :param allow_patch_many:
         :param validation_exceptions:
         :param include_columns:
+        :param exclude_columns:
         :param results_per_page:
         :param max_results_per_page:
         """
@@ -46,11 +48,16 @@ class BaseHandler(RequestHandler):
         self.max_results_per_page = max_results_per_page
 
         self.include_columns, self.include_relations = self.parse_columns(include_columns)
+        self.exclude_columns, self.exclude_relations = self.parse_columns(exclude_columns)
 
     def parse_columns(self, strings):
 
         columns = []
         relations = defaultdict(list)
+
+        # Strings
+        if strings is None:
+            return columns, relations
 
         # Parse
         for column in [column.split(".", 1) for column in strings]:
@@ -76,9 +83,9 @@ class BaseHandler(RequestHandler):
             Returns a list of filters bade by the query argument
         """
 
-        argument_filters = loads(self.get_argument("filters", ""))
+        argument_filters = loads(self.get_argument("filters", "[]"))
 
-        for argument_order in loads(self.get_argument("order_by", "")):
+        for argument_order in loads(self.get_argument("order_by", "[]")):
             direction = argument_order['direction']
             if direction not in ["asc", "desc"]:
                 raise IllegalArgumentError("Direction unkown")
