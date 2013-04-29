@@ -51,15 +51,16 @@ Quickstart
     Base = declarative_base(metadata=metadata)
     session = Session()
 
-    # Create some models
+    # Create some model
     class Person(Base):
-
         __tablename__ = 'persons'
+
         id = Column(Integer, primary_key=True)
         name = Column(String, unique=True)
 
     metadata.create_all(engine)
 
+    # Create restless api handlers
     api = ApiManager(application=application, session=session)
     api.create_api(Person)
 
