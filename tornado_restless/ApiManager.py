@@ -35,8 +35,10 @@ class ApiManager(object):
                              include_columns=None,
                              exclude_columns=None,
                              results_per_page: int=10,
-                             max_results_per_page: int=100) -> URLSpec:
+                             max_results_per_page: int=100,
+                             handler_class: BaseHandler=BaseHandler) -> URLSpec:
         """
+
 
         :param model:
         :param methods:
@@ -48,6 +50,7 @@ class ApiManager(object):
         :param exclude_columns:
         :param results_per_page:
         :param max_results_per_page:
+        :param handler_class: The Handler Class that will be registered, for customisation extend BaseHandler
         :return: tornado route
         :raise: IllegalArgumentError
         """
@@ -66,7 +69,7 @@ class ApiManager(object):
                   'results_per_page': results_per_page,
                   'max_results_per_page': max_results_per_page}
 
-        blueprint = URLSpec("%s/%s(/\d+)?" % (url_prefix, table_name), BaseHandler, kwargs, table_name)
+        blueprint = URLSpec("%s/%s(/\d+)?" % (url_prefix, table_name), handler_class, kwargs, table_name)
         return blueprint
 
     def create_api(self,

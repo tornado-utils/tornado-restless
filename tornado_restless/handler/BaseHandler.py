@@ -19,6 +19,11 @@ __date__ = '26.04.13 - 22:09'
 
 
 class BaseHandler(RequestHandler):
+    """
+        Basic Blueprint for a sqlalchemy model
+    """
+
+
     # noinspection PyMethodOverriding
     def initialize(self,
                    model,
@@ -167,13 +172,15 @@ class BaseHandler(RequestHandler):
         return alchemy_filters
 
 
-    def write_error(self, status_code, **kwargs):
+    def write_error(self, status_code: int, **kwargs):
         """
             Encodes any exceptions thrown to json
 
             SQLAlchemyError will be encoded as 400 / SQLAlchemy: Bad Request
             Errors from the restless api as 400 / Restless: Bad Arguments
             Any other exceptions will occur as an 500 exception
+
+            :param status_code: The Status Code in Response
         """
 
         if 'exc_info' in kwargs:
@@ -266,6 +273,8 @@ class BaseHandler(RequestHandler):
             :param instance:
             :param include_columns: Columns that should be included for an instance
             :param include_relations: Relations that should be include for an instance
+            :param exclude_columns: Columns that should not be included for an instance
+            :param exclude_relations: Relations that should not be include for an instance
         """
 
         # None
@@ -321,11 +330,13 @@ class BaseHandler(RequestHandler):
 
             # Include Columns
             for column in include_columns:
-                if not column in exclude_columns and column not in exclude_relations:
+                if not column in exclude_columns:
                     rtn[column] = self.to_dict(getattr(instance, column))
 
             # Include Relations but only one deep
             for column in include_relations:
+                if exclude_relations is not None and column in exclude_relations:
+                    continue
                 if include_relations is None or column in include_relations:
                     rtn[column] = self.to_dict(getattr(instance, column), include_relations=[])
 

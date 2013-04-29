@@ -7,5 +7,6 @@ __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '29.04.13 - 15:37'
 
 from .ApiManager import ApiManager
+from .handler.BaseHandler import BaseHandler
 
-__all__ = [ApiManager]
+__all__ = ['ApiManager', 'BaseHandler']
