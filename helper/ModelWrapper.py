@@ -6,6 +6,7 @@
 import inspect
 from sqlalchemy.orm import ColumnProperty
 from sqlalchemy.orm.attributes import QueryableAttribute
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql.operators import is_ordering_modifier
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
@@ -72,6 +73,7 @@ class ModelWrapper(object):
         """
             Gets the instance count
         """
+
         instance = self.session.query(self.model)
         for expression in filters:
             instance = instance.filter_by(expression)
@@ -90,7 +92,9 @@ class ModelWrapper(object):
             primary_keys = tuple(primary_keys)
 
         instance = self.session.query(self.model).get(primary_keys)
-        return instance.one()
+        if not instance:
+            raise NoResultFound("No row was found for get()")
+        return instance
 
 
 

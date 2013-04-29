@@ -5,7 +5,8 @@
 """
 from collections import defaultdict
 from json import loads
-from tornado.web import RequestHandler
+from sqlalchemy.exc import SQLAlchemyError
+from tornado.web import RequestHandler, HTTPError
 from api.helper.IllegalArgumentError import IllegalArgumentError
 from api.helper.ModelWrapper import ModelWrapper
 
@@ -162,7 +163,32 @@ class BaseHandler(RequestHandler):
         return alchemy_filters
 
 
+    def write_error(self, status_code, **kwargs):
+        """
+            Encodes any exceptions thrown to json
+
+            SQLAlchemyError will be encoded as 400 / SQLAlchemy: Bad Request
+            Errors from the restless api as 400 / Restless: Bad Arguments
+            Any other exceptions will occur as an 500 exception
+        """
+
+        if 'exc_info' in kwargs:
+            exc_type, exc_value = kwargs['exc_info'][:2]
+            if issubclass(exc_type, HTTPError) and exc_value.reason:
+                self.set_status(status_code, reason=exc_value.reason)
+            elif issubclass(exc_type, SQLAlchemyError):
+                self.set_status(400, reason='SQLAlchemy: Bad Request')
+            elif issubclass(exc_type, IllegalArgumentError):
+                self.set_status(400, reason='Restless: Bad Arguments')
+            self.finish({'type': exc_type.__name__, 'message': "%s" % exc_value})
+        else:
+            super().write_error(status_code, **kwargs)
+
+
     def get(self, pks=None):
+        """
+            GET request
+        """
 
         if not 'get' in self.methods:
             self.send_error(405)
