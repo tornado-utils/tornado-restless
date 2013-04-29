@@ -5,10 +5,14 @@
 """
 from collections import defaultdict
 from json import loads
+import logging
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import object_mapper, ColumnProperty, RelationshipProperty
+from sqlalchemy.orm.exc import UnmappedInstanceError
 from tornado.web import RequestHandler, HTTPError
-from api.helper.IllegalArgumentError import IllegalArgumentError
-from api.helper.ModelWrapper import ModelWrapper
+
+from ..helper.IllegalArgumentError import IllegalArgumentError
+from ..helper.ModelWrapper import ModelWrapper
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '26.04.13 - 22:09'
@@ -237,7 +241,7 @@ class BaseHandler(RequestHandler):
 
         # Num Results
         num_results = self.model.count(filters=filters)
-        num_pages = num_results / results_per_page
+        num_pages = num_results // results_per_page
 
         # Get Instances
         instances = self.model.all(offset=offset, limit=limit, filters=filters)
@@ -251,7 +255,9 @@ class BaseHandler(RequestHandler):
 
     def to_dict(self, instance,
                 include_columns=None,
-                include_relations=None):
+                include_relations=None,
+                exclude_columns=None,
+                exclude_relations=None):
         """
             Translates sqlalchemy instance to dictionary
 
@@ -262,11 +268,27 @@ class BaseHandler(RequestHandler):
             :param include_relations: Relations that should be include for an instance
         """
 
+        # None
+        if instance is None:
+            return None
+
         # List
         if isinstance(instance, list):
             return [self.to_dict(x) for x in instance]
 
-        # Object
+        # Dictionary
+        if isinstance(instance, dict):
+            return {k: self.to_dict(v) for k, v in instance.items()}
+
+        # Int
+        if isinstance(instance, int):
+            return instance
+
+        # Int
+        if isinstance(instance, str):
+            return instance
+
+        # Include Columns given
         if include_columns is not None:
             rtn = {}
             for column in include_columns:
@@ -277,7 +299,40 @@ class BaseHandler(RequestHandler):
                                            include_relations=include_relations[1])
             return rtn
 
-        raise TypeError("Unkown Type: %s" % instance.__class__)
+        if exclude_columns is None:
+            exclude_columns = []
+
+        if exclude_relations is None:
+            exclude_relations = {}
+
+        # SQLAlchemy instance?
+        try:
+            include_columns = []
+            include_relations = []
+            for p in object_mapper(instance).iterate_properties:
+                if isinstance(p, RelationshipProperty):
+                    include_relations.append(p.key)
+                elif isinstance(p, ColumnProperty):
+                    include_columns.append(p.key)
+                else:
+                    logging.warning("Unkown Property Instance: %s (%s)" % (p.key, type(p)))
+
+            rtn = {}
+
+            # Include Columns
+            for column in include_columns:
+                if not column in exclude_columns and column not in exclude_relations:
+                    rtn[column] = self.to_dict(getattr(instance, column))
+
+            # Include Relations but only one deep
+            for column in include_relations:
+                if include_relations is None or column in include_relations:
+                    rtn[column] = self.to_dict(getattr(instance, column), include_relations=[])
+
+            return rtn
+        except UnmappedInstanceError:
+            logging.info("Possible unkown instance type: %s" % type(instance))
+            return instance
 
 
 

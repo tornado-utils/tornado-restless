@@ -5,8 +5,9 @@
 """
 from sqlalchemy.orm import Session
 from tornado.web import Application, URLSpec
-from api.handler.BaseHandler import BaseHandler
-from api.helper.IllegalArgumentError import IllegalArgumentError
+
+from .handler.BaseHandler import BaseHandler
+from .helper.IllegalArgumentError import IllegalArgumentError
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '26.04.13 - 22:25'
@@ -68,14 +69,24 @@ class ApiManager(object):
         blueprint = URLSpec("%s/%s(/\d+)?" % (url_prefix, table_name), BaseHandler, kwargs, table_name)
         return blueprint
 
-    def create_api(self, model, *args, **kwargs):
+    def create_api(self,
+                   model,
+                   virtualhost=r".*$", *args, **kwargs):
         """
         Creates and registers a route for the model
 
-        The positional and keyword arguments are passed directly to the
-        :meth:`create_api_blueprint` method, so see the documentation there.
+        The positional and keyword arguments are passed directly to the create_api_blueprint method
+
+        :param model:
+        :param virtualhost: bindhost for binding, .*$ in default
         """
         blueprint = self.create_api_blueprint(model, *args, **kwargs)
-        self.application.handlers[-1] = (
-            self.application.handlers[-1][0], self.application.handlers[-1][1] + [blueprint])
+
+        for vhost, handlers in self.application.handlers:
+            if vhost == virtualhost:
+                handlers.append(blueprint)
+                break
+        else:
+            self.application.add_handlers(virtualhost, [blueprint])
+
         self.application.named_handlers[blueprint.name] = blueprint
