@@ -356,8 +356,17 @@ class BaseHandler(RequestHandler):
 
             return rtn
         except UnmappedInstanceError:
-            logging.info("Possible unkown instance type: %s" % type(instance))
+            self.logger.info("Possible unkown instance type: %s" % type(instance))
             return instance
+
+    @property
+    def logger(self):
+        """
+            Get the Request Logger
+        """
+        if not hasattr(self, "_logger"):
+            self._logger = logging.getLogger('tornado.restless')
+        return self._logger
 
 
 
