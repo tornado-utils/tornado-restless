@@ -68,7 +68,7 @@ class BaseHandler(RequestHandler):
 
         # Strings
         if strings is None:
-            return columns, relations
+            return None, None
 
         # Parse
         for column in [column.split(".", 1) for column in strings]:
@@ -257,7 +257,7 @@ class BaseHandler(RequestHandler):
 
         self.write({'num_results': num_results,
                     "num_pages": num_pages,
-                    "page": page,
+                    "page": page + 1,
                     "objects": self.to_dict(instances,
                                             include_columns=self.include_columns,
                                             include_relations=self.include_relations)})

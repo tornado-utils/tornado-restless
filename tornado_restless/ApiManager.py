@@ -72,7 +72,7 @@ class ApiManager(object):
                   'max_results_per_page': max_results_per_page}
 
         blueprint = URLSpec(
-            "%s/%s" % (url_prefix, table_name),
+            "%s/%s(?:/(.+))?" % (url_prefix, table_name),
             handler_class,
             kwargs,
             '%s_%s' % (blueprint_prefix, table_name))
