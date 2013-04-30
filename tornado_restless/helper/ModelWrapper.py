@@ -3,10 +3,15 @@
 """
 
 """
+from collections import namedtuple
 import inspect
+from sqlalchemy import inspect as sqinspect
+from sqlalchemy.ext.associationproxy import AssociationProxy
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import ColumnProperty
 from sqlalchemy.orm.attributes import QueryableAttribute
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.properties import RelationProperty
 from sqlalchemy.sql.operators import is_ordering_modifier
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
@@ -18,9 +23,8 @@ class ModelWrapper(object):
         Wrapper around sqlalchemy model for having some easier functions
     """
 
-    def __init__(self, model, session):
+    def __init__(self, model):
         self.model = model
-        self.session = session
 
     def primary_key_names(self):
         """
@@ -33,16 +37,111 @@ class ModelWrapper(object):
                    and isinstance(field.property, ColumnProperty)
             and field.property.columns[0].primary_key]
 
-    def primary_keys(self):
+    @staticmethod
+    def get_primary_keys(instance):
         """
             Returns the primary keys
 
             Inspired by flask-restless.helpers.primary_key_names
+
+            :param instance: Model ORM Instance
         """
-        return [field for key, field in inspect.getmembers(self.model)
+        return [field for key, field in inspect.getmembers(instance)
                 if isinstance(field, QueryableAttribute)
                    and isinstance(field.property, ColumnProperty)
             and field.property.columns[0].primary_key]
+
+    @property
+    def primary_keys(self):
+        return self.get_primary_keys(self.model)
+
+    @staticmethod
+    def get_columns(instance):
+        """
+            Returns the columns objects of the model
+
+            :param instance: Model ORM Instance
+        """
+        if hasattr(instance, 'iterate_properties'):
+            return [field for field in instance.iterate_properties
+                    if isinstance(field, ColumnProperty)]
+        else:
+            return [field for key, field in inspect.getmembers(instance)
+                    if isinstance(field, QueryableAttribute)
+                and isinstance(field.property, ColumnProperty)]
+
+    @property
+    def columns(self):
+        return self.get_columns(self.model)
+
+    @staticmethod
+    def get_relations(instance):
+        """
+            Returns the relations objects of the model
+
+            :param instance: Model ORM Instance
+        """
+        if hasattr(instance, 'iterate_properties'):
+            return [field for field in instance.iterate_properties
+                    if isinstance(field, RelationProperty)]
+        else:
+            return [field for key, field in inspect.getmembers(instance)
+                    if isinstance(field, QueryableAttribute)
+                and isinstance(field.property, RelationProperty)]
+
+    @property
+    def relations(self):
+        return self.get_relations(self.model)
+
+    @staticmethod
+    def get_hybrids(instance):
+        """
+            Returns the relations objects of the model
+
+            :param instance: Model ORM Instance
+        """
+        if hasattr(instance, 'iterate_properties'):
+            Proxy = namedtuple('Proxy', ['key', 'field'])
+            return [Proxy(key, field) for key, field in sqinspect(instance).all_orm_descriptors.items()
+                    if isinstance(field, hybrid_property)]
+        else:
+            return [field for key, field in inspect.getmembers(instance)
+                    if isinstance(field, hybrid_property)]
+
+    @property
+    def hybrids(self):
+        return self.get_hybrids(self.model)
+
+    @staticmethod
+    def get_proxies(instance):
+        """
+            Returns the proxies objects of the model
+
+            Inspired by https://groups.google.com/forum/?fromgroups=#!topic/sqlalchemy/aDi_M4iH7d0
+
+            :param instance: Model ORM Instance
+        """
+        if hasattr(instance, 'iterate_properties'):
+            Proxy = namedtuple('Proxy', ['key', 'field'])
+            return [Proxy(key, field) for key, field in sqinspect(instance).all_orm_descriptors.items()
+                    if isinstance(field, AssociationProxy)]
+        else:
+            return [field for key, field in inspect.getmembers(instance)
+                    if isinstance(field, AssociationProxy)]
+
+    @property
+    def proxies(self):
+        return self.get_proxies(self.model)
+
+
+class SessionedModelWrapper(ModelWrapper):
+    """
+        Wrapper around sqlalchemy model for having some easier functions
+    """
+
+    def __init__(self, model, session):
+        super().__init__(model)
+        self.session = session
 
     def one(self, filters):
         """

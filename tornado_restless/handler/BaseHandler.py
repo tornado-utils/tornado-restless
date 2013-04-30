@@ -6,13 +6,14 @@
 from collections import defaultdict
 from json import loads
 import logging
+from traceback import print_exception
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import object_mapper, ColumnProperty, RelationshipProperty
+from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
 from tornado.web import RequestHandler, HTTPError
 
 from ..helper.IllegalArgumentError import IllegalArgumentError
-from ..helper.ModelWrapper import ModelWrapper
+from ..helper.ModelWrapper import SessionedModelWrapper
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '26.04.13 - 22:09'
@@ -49,7 +50,7 @@ class BaseHandler(RequestHandler):
         """
         super().initialize()
 
-        self.model = ModelWrapper(model, session)
+        self.model = SessionedModelWrapper(model, session)
         self.methods = [method.lower() for method in methods]
         self.allow_patch_many = allow_patch_many
         self.validation_exceptions = validation_exceptions
@@ -185,6 +186,7 @@ class BaseHandler(RequestHandler):
 
         if 'exc_info' in kwargs:
             exc_type, exc_value = kwargs['exc_info'][:2]
+            print_exception(*kwargs['exc_info'])
             if issubclass(exc_type, HTTPError) and exc_value.reason:
                 self.set_status(status_code, reason=exc_value.reason)
             elif issubclass(exc_type, SQLAlchemyError):
@@ -293,9 +295,13 @@ class BaseHandler(RequestHandler):
         if isinstance(instance, int):
             return instance
 
-        # Int
+        # String
         if isinstance(instance, str):
             return instance
+
+        # Any Dictionary Object
+        if hasattr(instance, 'items'):
+            return {k: self.to_dict(v) for k, v in instance.items()}
 
         # Include Columns given
         if include_columns is not None:
@@ -316,20 +322,28 @@ class BaseHandler(RequestHandler):
 
         # SQLAlchemy instance?
         try:
-            include_columns = []
-            include_relations = []
-            for p in object_mapper(instance).iterate_properties:
-                if isinstance(p, RelationshipProperty):
-                    include_relations.append(p.key)
-                elif isinstance(p, ColumnProperty):
-                    include_columns.append(p.key)
-                else:
-                    logging.warning("Unkown Property Instance: %s (%s)" % (p.key, type(p)))
+            include_columns = [p.key for p in self.model.get_columns(object_mapper(instance))]
+            include_relations = [p.key for p in self.model.get_relations(object_mapper(instance))]
+            include_proxies = [p.key for p in self.model.get_proxies(object_mapper(instance))]
+            include_hybrids = [p.key for p in self.model.get_hybrids(object_mapper(instance))]
 
             rtn = {}
 
             # Include Columns
             for column in include_columns:
+                if not column in exclude_columns:
+                    rtn[column] = self.to_dict(getattr(instance, column))
+
+            # Include AssociationProxy
+            for column in include_proxies:
+                if not column in exclude_columns:
+                    try:
+                        rtn[column] = self.to_dict(getattr(instance, column))
+                    except AttributeError:
+                        rtn[column] = None
+
+            # Include Hybrid Properties
+            for column in include_hybrids:
                 if not column in exclude_columns:
                     rtn[column] = self.to_dict(getattr(instance, column))
 
