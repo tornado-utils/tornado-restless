@@ -6,6 +6,7 @@
 from collections import defaultdict
 from json import loads
 import logging
+from math import ceil
 from traceback import print_exception
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import object_mapper
@@ -250,7 +251,7 @@ class BaseHandler(RequestHandler):
 
         # Num Results
         num_results = self.model.count(filters=filters)
-        num_pages = num_results // results_per_page
+        num_pages = ceil(num_results / results_per_page)
 
         # Get Instances
         instances = self.model.all(offset=offset, limit=limit, filters=filters)
