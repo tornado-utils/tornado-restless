@@ -74,6 +74,10 @@ class ModelWrapper(object):
     def columns(self):
         return self.get_columns(self.model)
 
+    @property
+    def column_names(self):
+        return [p.key for p in self.get_columns(self.model)]
+
     @staticmethod
     def get_relations(instance):
         """
@@ -100,12 +104,12 @@ class ModelWrapper(object):
 
             :param instance: Model ORM Instance
         """
+        Proxy = namedtuple('Proxy', ['key', 'field'])
         if hasattr(instance, 'iterate_properties'):
-            Proxy = namedtuple('Proxy', ['key', 'field'])
             return [Proxy(key, field) for key, field in sqinspect(instance).all_orm_descriptors.items()
                     if isinstance(field, hybrid_property)]
         else:
-            return [field for key, field in inspect.getmembers(instance)
+            return [Proxy(key, field) for key, field in inspect.getmembers(instance)
                     if isinstance(field, hybrid_property)]
 
     @property
@@ -121,12 +125,12 @@ class ModelWrapper(object):
 
             :param instance: Model ORM Instance
         """
+        Proxy = namedtuple('Proxy', ['key', 'field'])
         if hasattr(instance, 'iterate_properties'):
-            Proxy = namedtuple('Proxy', ['key', 'field'])
             return [Proxy(key, field) for key, field in sqinspect(instance).all_orm_descriptors.items()
                     if isinstance(field, AssociationProxy)]
         else:
-            return [field for key, field in inspect.getmembers(instance)
+            return [Proxy(key, field) for key, field in inspect.getmembers(instance)
                     if isinstance(field, AssociationProxy)]
 
     @property
@@ -193,6 +197,13 @@ class SessionedModelWrapper(ModelWrapper):
         instance = self.session.query(self.model).get(primary_keys)
         if not instance:
             raise NoResultFound("No row was found for get()")
+        return instance
+
+    def __call__(self, **kwargs):
+        instance = self.model()
+        for key, value in kwargs:
+            setattr(instance, key, value)
+        self.session.add(instance)
         return instance
 
 

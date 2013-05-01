@@ -14,6 +14,14 @@ __date__ = '26.04.13 - 22:25'
 
 
 class ApiManager(object):
+    METHODS_READ = frozenset(['GET'])
+    METHODS_WRITE = frozenset(['POST'])
+    METHODS_CREATE = frozenset(['PUT', 'PATCH'])
+    METHODS_DELETE = frozenset(['DELETE'])
+
+    METHODS_UPDATE = METHODS_READ | METHODS_WRITE
+    METHODS_ALL = METHODS_READ | METHODS_WRITE | METHODS_CREATE | METHODS_DELETE
+
     def __init__(self,
                  application: Application,
                  session: Session):
@@ -31,12 +39,13 @@ class ApiManager(object):
                              url_prefix='/api',
                              collection_name=None,
                              allow_patch_many: bool=False,
+                             allow_method_override: bool=False,
                              validation_exceptions=None,
                              include_columns=None,
                              exclude_columns=None,
                              results_per_page: int=10,
                              max_results_per_page: int=100,
-                             blueprint_prefix='rs',
+                             blueprint_prefix='',
                              handler_class: BaseHandler=BaseHandler) -> URLSpec:
         """
 
@@ -45,7 +54,8 @@ class ApiManager(object):
         :param methods:
         :param url_prefix:
         :param collection_name:
-        :param allow_patch_many:
+        :param allow_patch_many: Allow PATCH with multiple datasets
+        :param allow_method_override: Support X-HTTP-Method-Override Header
         :param validation_exceptions:
         :param include_columns:
         :param exclude_columns:
@@ -65,6 +75,7 @@ class ApiManager(object):
                   'session': self.session,
                   'methods': methods,
                   'allow_patch_many': allow_patch_many,
+                  'allow_method_override': allow_method_override,
                   'validation_exceptions': validation_exceptions,
                   'include_columns': include_columns,
                   'exclude_columns': exclude_columns,
@@ -75,7 +86,7 @@ class ApiManager(object):
             "%s/%s(?:/(.+))?" % (url_prefix, table_name),
             handler_class,
             kwargs,
-            '%s_%s' % (blueprint_prefix, table_name))
+            '%s%s' % (blueprint_prefix, table_name))
         return blueprint
 
     def create_api(self,

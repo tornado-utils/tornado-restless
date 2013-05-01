@@ -8,6 +8,7 @@ from json import loads
 import logging
 from math import ceil
 from traceback import print_exception
+from urllib.parse import parse_qs
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
@@ -25,6 +26,7 @@ class BaseHandler(RequestHandler):
         Basic Blueprint for a sqlalchemy model
     """
 
+    SUPPORTED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
     # noinspection PyMethodOverriding
     def initialize(self,
@@ -32,6 +34,7 @@ class BaseHandler(RequestHandler):
                    session,
                    methods,
                    allow_patch_many,
+                   allow_method_override,
                    validation_exceptions,
                    include_columns,
                    exclude_columns,
@@ -43,12 +46,18 @@ class BaseHandler(RequestHandler):
         :param methods:
         :param session:
         :param allow_patch_many:
+        :param allow_method_override:
         :param validation_exceptions:
         :param include_columns:
         :param exclude_columns:
         :param results_per_page:
         :param max_results_per_page:
         """
+
+        # Override Method if Header provided
+        if allow_method_override and 'X-HTTP-Method-Override' in self.request.headers:
+            self.request.method = self.request.headers['X-HTTP-Method-Override']
+
         super().initialize()
 
         self.model = SessionedModelWrapper(model, session)
@@ -198,6 +207,186 @@ class BaseHandler(RequestHandler):
         else:
             super().write_error(status_code, **kwargs)
 
+    def patch(self, pks=None):
+        """
+            PUT (update input) request
+        """
+
+        if not 'patch' in self.methods:
+            self.send_error(405)
+            return
+
+        if pks is None:
+            if self.allow_patch_many:
+                self.patch_many()
+            else:
+                self.send_error(403)
+        else:
+            self.patch_single(pks)
+
+    def put(self, pks=None):
+        """
+            PUT (update input) request
+        """
+
+        if not 'put' in self.methods:
+            self.logger.warning('PUT was not allowed in %s' % self.methods)
+            self.send_error(405)
+            return
+
+        if pks is None:
+            if self.allow_patch_many:
+                self.patch_many()
+            else:
+                self.send_error(403)
+        else:
+            self.patch_single(pks)
+
+    def post(self):
+        """
+            POST (new input) request
+        """
+
+        if not 'post' in self.methods:
+            self.send_error(405)
+            return
+
+        with self.model.session.begin_nested():
+            values = self.get_argument_values()
+
+            # Create Instance
+            instance = self.model(**values)
+
+            # Commit
+            self.model.session.commit()
+
+            # Refresh
+            self.model.session.refresh(instance)
+
+            # Set Status
+            self.set_status(201)
+
+            # To Dict
+            self.write(self.to_dict(instance,
+                                    include_columns=self.include_columns,
+                                    include_relations=self.include_relations,
+                                    exclude_columns=self.exclude_columns,
+                                    exclude_relations=self.exclude_relations))
+
+    def get_content_encoding(self):
+        """
+        Get the encoding the client sends us for encoding request.body correctly
+        """
+
+        content_type_args = {k.strip(): v for k, v in parse_qs(self.request.headers['Content-Type']).items()}
+        if 'charset' in content_type_args and content_type_args['charset']:
+            return content_type_args['charset'][0]
+        else:
+            return 'latin1'
+
+    _ARG_DEFAULT = []
+
+    def get_body_argument(self, key, default=_ARG_DEFAULT):
+        """
+        Get an argument named key from json encoded body
+
+        :param key:
+        :param default:
+        :return:
+        :raise:
+        """
+        arguments = self.get_body_arguments()
+        if key in arguments:
+            return arguments[key]
+        elif default is self._ARG_DEFAULT:
+            raise HTTPError(400, "Missing argument %s" % key)
+        else:
+            return default
+
+    def get_body_arguments(self):
+        """
+        Get arguments encode as json body
+        """
+
+        try:
+            return self._body_arguments
+        except AttributeError:
+            self.logger.info(self.request.body)
+            self._body_arguments = loads(str(self.request.body, encoding=self.get_content_encoding()))
+            return self._body_arguments
+
+    def get_argument_values(self):
+        """
+            Get all values provided via arguments
+        """
+
+        # Include Columns
+        if self.include_columns is not None:
+            values = {k: self.get_body_argument(k) for k in self.include_columns}
+        else:
+            values = {k: v for k, v in self.get_body_arguments().items()}
+
+        # Exclude Columns
+        if self.exclude_columns is not None:
+            for column in self.exclude_columns:
+                if column in values:
+                    del values[column]
+
+        # Silently Ignore proxies
+        for proxy in self.model.proxies:
+            if proxy.key in values:
+                self.logger.debug("Skipping proxy: %s" % proxy.key)
+                del values[proxy.key]
+
+        # Silently Ignore hybrids
+        for hybrid in self.model.hybrids:
+            if hybrid.key in values:
+                self.logger.debug("Skipping hybrid: %s" % hybrid.key)
+                del values[hybrid.key]
+
+        # Handle Relations extra
+        values_relations = {}
+        for relation in self.model.relations:
+            if relation.key in values:
+                values_relations[relation.key] = values[relation.key]
+                del values[relation.key]
+
+        # Check Columns
+        #for column in values:
+        #    if not column in self.model.column_names:
+        #        raise IllegalArgumentError("Column '%s' not defined for model %s" % (column, self.model.model))
+
+        return values
+
+    def patch_single(self, pks):
+        """
+            Patch one instance with primary_keys pks
+        """
+
+        # Flush
+        self.model.session.flush()
+
+        values = self.get_argument_values()
+
+        # Get Instance
+        instance = self.model.get(pks.split(","))
+        for (key, value) in values.items():
+            logging.debug("%s => %s" % (key, value))
+            setattr(instance, key, value)
+
+        # Commit
+        self.model.session.commit()
+
+        # Refresh
+        self.model.session.refresh(instance)
+
+        # To Dict
+        self.write(self.to_dict(instance,
+                                include_columns=self.include_columns,
+                                include_relations=self.include_relations,
+                                exclude_columns=self.exclude_columns,
+                                exclude_relations=self.exclude_relations))
+
 
     def get(self, pks=None):
         """
@@ -205,15 +394,16 @@ class BaseHandler(RequestHandler):
         """
 
         if not 'get' in self.methods:
+            self.logger.warning('GET was not allowed in %s' % self.methods)
             self.send_error(405)
             return
 
         if pks is None:
-            self.get_all()
+            self.get_many()
         else:
-            self.get_one(pks)
+            self.get_single(pks)
 
-    def get_one(self, pks):
+    def get_single(self, pks):
         """
             Get one instance with primary_keys pks
         """
@@ -224,9 +414,11 @@ class BaseHandler(RequestHandler):
         # To Dict
         self.write(self.to_dict(instance,
                                 include_columns=self.include_columns,
-                                include_relations=self.include_relations))
+                                include_relations=self.include_relations,
+                                exclude_columns=self.exclude_columns,
+                                exclude_relations=self.exclude_relations))
 
-    def get_all(self):
+    def get_many(self):
         """
             Get all instances
         """
