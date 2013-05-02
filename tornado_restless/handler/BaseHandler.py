@@ -431,7 +431,10 @@ class BaseHandler(RequestHandler):
         limit = self.get_query_argument("limit", None)
 
         # Modify Instances
-        instances = self.model.all(limit=limit, filters=filters)
+        if self.get_query_argument("single", False):
+            instances = [self.model.one(filters=filters)]
+        else:
+            instances = self.model.all(limit=limit, filters=filters)
         for instance in instances:
             for (key, value) in values.items():
                 logging.debug("%s => %s" % (key, value))
@@ -539,7 +542,10 @@ class BaseHandler(RequestHandler):
         num_pages = ceil(num_results / results_per_page)
 
         # Get Instances
-        instances = self.model.all(offset=offset, limit=limit, filters=filters)
+        if self.get_query_argument("single", False):
+            instances = [self.model.one(offset=offset, filters=filters)]
+        else:
+            instances = self.model.all(offset=offset, limit=limit, filters=filters)
 
         self.write({'num_results': num_results,
                     "num_pages": num_pages,

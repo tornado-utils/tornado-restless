@@ -53,6 +53,9 @@ class ModelWrapper(object):
 
     @property
     def primary_keys(self):
+        """
+        @see get_primary_keys
+        """
         return self.get_primary_keys(self.model)
 
     @staticmethod
@@ -72,6 +75,9 @@ class ModelWrapper(object):
 
     @property
     def columns(self):
+        """
+        @see get_columns
+        """
         return self.get_columns(self.model)
 
     @property
@@ -95,6 +101,9 @@ class ModelWrapper(object):
 
     @property
     def relations(self):
+        """
+        @see get_relations
+        """
         return self.get_relations(self.model)
 
     @staticmethod
@@ -114,6 +123,9 @@ class ModelWrapper(object):
 
     @property
     def hybrids(self):
+        """
+        @see get_hybrids
+        """
         return self.get_hybrids(self.model)
 
     @staticmethod
@@ -147,18 +159,30 @@ class SessionedModelWrapper(ModelWrapper):
         super().__init__(model)
         self.session = session
 
-    def one(self, filters):
+    def one(self, offset: int=None, filters: list=()) -> object:
         """
             Gets one instance of the model filtered by filters
+
+            :param offset: Offset for request
+            :param filters: Filters and OrderBy Clauses
         """
         instance = self.session.query(self.model)
         for expression in filters:
-            instance = instance.filter_by(expression)
+            if is_ordering_modifier(expression.operator):
+                instance = instance.order_by(expression)
+            else:
+                instance = instance.filter_by(expression)
+        if offset is not None:
+            instance = instance.offset(offset)
         return instance.one()
 
-    def all(self, offset=None, limit=None, filters=()):
+    def all(self, offset: int=None, limit: int=None, filters: list=()) -> list:
         """
             Gets all instances of the model filtered by filters
+
+            :param offset: Offset for request
+            :param limit: Limit for request
+            :param filters: Filters and OrderBy Clauses
         """
         instance = self.session.query(self.model)
         for expression in filters:
@@ -172,28 +196,27 @@ class SessionedModelWrapper(ModelWrapper):
             instance = instance.limit(limit)
         return instance.all()
 
-    def count(self, filters=()):
+    def count(self, filters: list=()) -> int:
         """
             Gets the instance count
-        """
 
+            :param filters: Filters and OrderBy Clauses
+        """
         instance = self.session.query(self.model)
         for expression in filters:
             instance = instance.filter_by(expression)
         return instance.count()
 
-    def get(self, primary_keys):
+    def get(self, primary_keys) -> object:
         """
             Gets one instance of the model based on primary_keys
+
             :param primary_keys: values of primary_keys
         """
-
-        # Transform to tuple
         if len(primary_keys) == 1:
             primary_keys = primary_keys[0]
         else:
             primary_keys = tuple(primary_keys)
-
         instance = self.session.query(self.model).get(primary_keys)
         if not instance:
             raise NoResultFound("No row was found for get()")
