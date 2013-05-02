@@ -1,7 +1,10 @@
 #!/usr/bin/python
 # -*- encoding: utf-8 -*-
 """
+    Tornado Restless BaseHandler
 
+    Handles all registered blueprints, you may override this class and
+     use the modification via create_api_blueprint(handler_class=...)
 """
 from collections import defaultdict
 from json import loads
@@ -71,8 +74,13 @@ class BaseHandler(RequestHandler):
         self.include_columns, self.include_relations = self.parse_columns(include_columns)
         self.exclude_columns, self.exclude_relations = self.parse_columns(exclude_columns)
 
-    def parse_columns(self, strings):
+    def parse_columns(self, strings: list):
+        """
+            Parse a list of column names (name1, name2, relation.name1, ...)
 
+            :param strings: List of Column Names
+            :return:
+        """
         columns = []
         relations = defaultdict(list)
 
@@ -104,14 +112,18 @@ class BaseHandler(RequestHandler):
             Returns a list of filters bade by the query argument
         """
 
-        argument_filters = loads(self.get_argument("filters", "[]"))
+        # Get all provided filters
+        argument_filters = self.get_query_argument("filters", [])
 
-        for argument_order in loads(self.get_argument("order_by", "[]")):
+        # Parse order by as filters
+        argument_orders = self.get_query_argument("order_by", [])
+        for argument_order in argument_orders:
             direction = argument_order['direction']
             if direction not in ["asc", "desc"]:
                 raise IllegalArgumentError("Direction unkown")
             argument_filters.append({'name': argument_order['field'], 'op': direction})
 
+        # Create Alchemy Filters
         alchemy_filters = []
         for argument_filter in argument_filters:
 
@@ -182,7 +194,6 @@ class BaseHandler(RequestHandler):
                 alchemy_filters.append(left.asc())
         return alchemy_filters
 
-
     def write_error(self, status_code: int, **kwargs):
         """
             Encodes any exceptions thrown to json
@@ -192,6 +203,7 @@ class BaseHandler(RequestHandler):
             Any other exceptions will occur as an 500 exception
 
             :param status_code: The Status Code in Response
+            :param kwargs: Additional Parameters
         """
 
         if 'exc_info' in kwargs:
@@ -209,7 +221,9 @@ class BaseHandler(RequestHandler):
 
     def patch(self, pks=None):
         """
-            PUT (update input) request
+            PATCH (update input) request
+
+            :param pks: query argument of request (list of primary keys, comma seperated)
         """
 
         if not 'patch' in self.methods:
@@ -227,6 +241,8 @@ class BaseHandler(RequestHandler):
     def put(self, pks=None):
         """
             PUT (update input) request
+
+            :param pks: query argument of request (list of primary keys, comma seperated)
         """
 
         if not 'put' in self.methods:
@@ -284,28 +300,48 @@ class BaseHandler(RequestHandler):
         else:
             return 'latin1'
 
-    _ARG_DEFAULT = []
-
-    def get_body_argument(self, key, default=_ARG_DEFAULT):
+    def get_body_argument(self, name: str, default=RequestHandler._ARG_DEFAULT):
         """
         Get an argument named key from json encoded body
 
-        :param key:
+        :param name:
         :param default:
         :return:
-        :raise:
+        :raise: 400 Missing Argument
         """
         arguments = self.get_body_arguments()
-        if key in arguments:
-            return arguments[key]
-        elif default is self._ARG_DEFAULT:
-            raise HTTPError(400, "Missing argument %s" % key)
+        if name in arguments:
+            return arguments[name]
+        elif default is RequestHandler._ARG_DEFAULT:
+            raise HTTPError(400, "Missing argument %s" % name)
+        else:
+            return default
+
+    def get_query_argument(self, name: str, default=RequestHandler._ARG_DEFAULT):
+        """
+        Get an argument named key from json encoded body
+
+        :param name:
+        :param default:
+        :return:
+        :raise: 400 Missing Argument
+        """
+
+        try:
+            query = self._query
+        except AttributeError:
+            query = self._query = loads(self.get_argument("q", default="{}"))
+
+        if name in query:
+            return query[name]
+        elif default is RequestHandler._ARG_DEFAULT:
+            raise HTTPError(400, "Missing argument %s" % name)
         else:
             return default
 
     def get_body_arguments(self):
         """
-        Get arguments encode as json body
+            Get arguments encode as json body
         """
 
         try:
@@ -314,6 +350,21 @@ class BaseHandler(RequestHandler):
             self.logger.info(self.request.body)
             self._body_arguments = loads(str(self.request.body, encoding=self.get_content_encoding()))
             return self._body_arguments
+
+    def get_argument(self, name: str, **kwargs):
+        """
+            On PUT/PATCH many request parameter may be located in body instead of query
+
+            :param name: Name of argument
+            :param kwargs: Additional parameters @see tornado.web.RequestHandler.get_argument
+        """
+        try:
+            return super().get_argument(name, **kwargs)
+        except HTTPError:
+            if name == "q" and self.request.method in ['PUT', 'PATCH']:
+                return self.get_body_argument(name, **kwargs)
+            else:
+                raise
 
     def get_argument_values(self):
         """
@@ -325,6 +376,10 @@ class BaseHandler(RequestHandler):
             values = {k: self.get_body_argument(k) for k in self.include_columns}
         else:
             values = {k: v for k, v in self.get_body_arguments().items()}
+
+        # Exclude "q"
+        if "q" in values:
+            del values["q"]
 
         # Exclude Columns
         if self.exclude_columns is not None:
@@ -358,14 +413,48 @@ class BaseHandler(RequestHandler):
 
         return values
 
-    def patch_single(self, pks):
+    def patch_many(self):
         """
-            Patch one instance with primary_keys pks
+            Patch many instances
         """
 
         # Flush
         self.model.session.flush()
 
+        # Get values
+        values = self.get_argument_values()
+
+        # Filters
+        filters = self.get_filters()
+
+        # Limit
+        limit = self.get_query_argument("limit", None)
+
+        # Modify Instances
+        instances = self.model.all(limit=limit, filters=filters)
+        for instance in instances:
+            for (key, value) in values.items():
+                logging.debug("%s => %s" % (key, value))
+                setattr(instance, key, value)
+
+        # Commit
+        self.model.session.commit()
+
+        # Result
+        self.set_status(201, "Patched")
+        self.write({'num_modified': len(instances)})
+
+    def patch_single(self, pks):
+        """
+            Patch one instance with primary_keys pks
+
+            :param pks: query argument of request (list of primary keys, comma seperated)
+        """
+
+        # Flush
+        self.model.session.flush()
+
+        # Get values
         values = self.get_argument_values()
 
         # Get Instance
@@ -380,17 +469,19 @@ class BaseHandler(RequestHandler):
         # Refresh
         self.model.session.refresh(instance)
 
-        # To Dict
+        # Result
+        self.set_status(201, "Patched")
         self.write(self.to_dict(instance,
                                 include_columns=self.include_columns,
                                 include_relations=self.include_relations,
                                 exclude_columns=self.exclude_columns,
                                 exclude_relations=self.exclude_relations))
 
-
     def get(self, pks=None):
         """
             GET request
+
+            :param pks: query argument of request (list of primary keys, comma seperated)
         """
 
         if not 'get' in self.methods:
@@ -406,6 +497,8 @@ class BaseHandler(RequestHandler):
     def get_single(self, pks):
         """
             Get one instance with primary_keys pks
+
+            :param pks: query argument of request (list of primary keys, comma seperated)
         """
 
         # Get Instance
@@ -424,13 +517,13 @@ class BaseHandler(RequestHandler):
         """
 
         # Results per Page
-        results_per_page = self.get_argument("results_per_page", self.results_per_page)
+        results_per_page = self.get_query_argument("results_per_page", self.results_per_page)
         if results_per_page > self.max_results_per_page:
             raise IllegalArgumentError("request.results_per_page > application.max_results_per_page")
 
         # Offset
-        offset = self.get_argument("offset", 0)
-        page = self.get_argument("page", 1) - 1
+        offset = self.get_query_argument("offset", 0)
+        page = self.get_query_argument("page", 1) - 1
         offset += page * results_per_page
         if offset < 0:
             raise IllegalArgumentError("request.offset < 0")
@@ -439,7 +532,7 @@ class BaseHandler(RequestHandler):
         filters = self.get_filters()
 
         # Limit
-        limit = self.get_argument("limit", results_per_page)
+        limit = self.get_query_argument("limit", results_per_page)
 
         # Num Results
         num_results = self.model.count(filters=filters)
@@ -560,10 +653,3 @@ class BaseHandler(RequestHandler):
         if not hasattr(self, "_logger"):
             self._logger = logging.getLogger('tornado.restless')
         return self._logger
-
-
-
-
-
-
-
