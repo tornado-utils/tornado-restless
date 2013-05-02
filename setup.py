@@ -9,13 +9,26 @@ __date__ = '29.04.13 - 15:34'
 from distutils.core import setup
 
 setup(
-    name='tornado-restless',
+    name='Tornado-Restless',
     version='0.1.0',
     author='Martin Martimeo',
     author_email='martin@martimeo.de',
+    url='https://github.com/MartinMartimeo/tornado-restless',
     packages=['tornado_restless'],
-    license='LICENSE.txt',
+    license='GNU AGPLv3+',
+    platforms='any',
     description='flask-restless adopted for tornado',
     long_description=open('README.md').read(),
-    install_requires=open('requirements.txt').readlines()
+    install_requires=open('requirements.txt').readlines(),
+    download_url='http://pypi.python.org/pypi/Tornado-Restless',
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Environment :: Web Environment',
+        'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
+        'Topic :: Software Development :: Libraries :: Python Modules'
+    ],
 )
