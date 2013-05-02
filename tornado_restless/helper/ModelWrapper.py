@@ -147,6 +147,9 @@ class ModelWrapper(object):
 
     @property
     def proxies(self):
+        """
+        @see get_proxies
+        """
         return self.get_proxies(self.model)
 
 
@@ -195,6 +198,27 @@ class SessionedModelWrapper(ModelWrapper):
         if limit is not None:
             instance = instance.limit(limit)
         return instance.all()
+
+    def update(self, values: dict, offset: int=None, limit: int=None, filters: list=()) -> int:
+        """
+            Updates all instances of the model filtered by filters
+
+            :param values: Dictionary of values
+            :param offset: Offset for request
+            :param limit: Limit for request
+            :param filters: Filters and OrderBy Clauses
+        """
+        instance = self.session.query(self.model)
+        for expression in filters:
+            if is_ordering_modifier(expression.operator):
+                instance = instance.order_by(expression)
+            else:
+                instance = instance.filter_by(expression)
+        if offset is not None:
+            instance = instance.offset(offset)
+        if limit is not None:
+            instance = instance.limit(limit)
+        return instance.update(values)
 
     def count(self, filters: list=()) -> int:
         """

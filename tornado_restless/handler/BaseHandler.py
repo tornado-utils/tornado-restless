@@ -433,19 +433,20 @@ class BaseHandler(RequestHandler):
         # Modify Instances
         if self.get_query_argument("single", False):
             instances = [self.model.one(filters=filters)]
+            for instance in instances:
+                for (key, value) in values.items():
+                    logging.debug("%s => %s" % (key, value))
+                    setattr(instance, key, value)
+            num = 1
         else:
-            instances = self.model.all(limit=limit, filters=filters)
-        for instance in instances:
-            for (key, value) in values.items():
-                logging.debug("%s => %s" % (key, value))
-                setattr(instance, key, value)
+            num = self.model.update(values, limit=limit, filters=filters)
 
         # Commit
         self.model.session.commit()
 
         # Result
         self.set_status(201, "Patched")
-        self.write({'num_modified': len(instances)})
+        self.write({'num_modified': num})
 
     def patch_single(self, pks):
         """
