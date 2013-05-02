@@ -220,6 +220,26 @@ class SessionedModelWrapper(ModelWrapper):
             instance = instance.limit(limit)
         return instance.update(values)
 
+    def delete(self, offset: int=None, limit: int=None, filters: list=()) -> int:
+        """
+            Delete all instances of the model filtered by filters
+
+            :param offset: Offset for request
+            :param limit: Limit for request
+            :param filters: Filters and OrderBy Clauses
+        """
+        instance = self.session.query(self.model)
+        for expression in filters:
+            if is_ordering_modifier(expression.operator):
+                instance = instance.order_by(expression)
+            else:
+                instance = instance.filter_by(expression)
+        if offset is not None:
+            instance = instance.offset(offset)
+        if limit is not None:
+            instance = instance.limit(limit)
+        return instance.delete()
+
     def count(self, filters: list=()) -> int:
         """
             Gets the instance count
