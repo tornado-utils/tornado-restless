@@ -67,11 +67,11 @@ class ModelWrapper(object):
         """
         if hasattr(instance, 'iterate_properties'):
             return [field for field in instance.iterate_properties
-                    if isinstance(field, ColumnProperty)]
+                    if isinstance(field, ColumnProperty) and not 'hidden' in field.info]
         else:
             return [field for key, field in inspect.getmembers(instance)
                     if isinstance(field, QueryableAttribute)
-                and isinstance(field.property, ColumnProperty)]
+                       and isinstance(field.property, ColumnProperty) and not 'hidden' in field.info]
 
     @property
     def columns(self):
@@ -268,7 +268,7 @@ class SessionedModelWrapper(ModelWrapper):
 
     def __call__(self, **kwargs):
         instance = self.model()
-        for key, value in kwargs:
+        for key, value in kwargs.items():
             setattr(instance, key, value)
         self.session.add(instance)
         return instance

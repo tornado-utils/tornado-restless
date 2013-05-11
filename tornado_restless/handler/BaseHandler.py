@@ -12,10 +12,28 @@ import logging
 from math import ceil
 from traceback import print_exception
 from urllib.parse import parse_qs
+import sys
+
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
 from tornado.web import RequestHandler, HTTPError
+
+
+try:
+    from tornado.web import MethodNotAllowedError
+except ImportError:
+    class MethodNotAllowedError(HTTPError):
+        """An exception occuring when the method is not supported by the handler
+
+        Takes in addition to `HTTPError` arguments method and stores it value
+
+        :arg string method: The name of the method that was called
+        """
+
+        def __init__(self, method=None, status_code=405, log_message=None, *args, **kwargs):
+            super().__init__(status_code, log_message, *args, **kwargs)
+            self.method = method
 
 from ..helper.IllegalArgumentError import IllegalArgumentError
 from ..helper.ModelWrapper import SessionedModelWrapper
@@ -227,8 +245,7 @@ class BaseHandler(RequestHandler):
         """
 
         if not 'patch' in self.methods:
-            self.send_error(405)
-            return
+            raise MethodNotAllowedError(self.request.method)
 
         if pks is None:
             if self.allow_patch_many:
@@ -313,9 +330,7 @@ class BaseHandler(RequestHandler):
         """
 
         if not 'delete' in self.methods:
-            self.logger.warning('DELETE was not allowed in %s' % self.methods)
-            self.send_error(405)
-            return
+            raise MethodNotAllowedError(self.request.method)
 
         if pks is None:
             if self.allow_patch_many:
@@ -378,9 +393,7 @@ class BaseHandler(RequestHandler):
         """
 
         if not 'put' in self.methods:
-            self.logger.warning('PUT was not allowed in %s' % self.methods)
-            self.send_error(405)
-            return
+            raise MethodNotAllowedError(self.request.method)
 
         if pks is None:
             if self.allow_patch_many:
@@ -390,36 +403,48 @@ class BaseHandler(RequestHandler):
         else:
             self.patch_single(pks)
 
-    def post(self):
+    def post(self, pks=None):
         """
             POST (new input) request
+
+            :param pks: (ignored)
         """
 
         if not 'post' in self.methods:
-            self.send_error(405)
-            return
+            raise MethodNotAllowedError(self.request.method)
 
-        with self.model.session.begin_nested():
-            values = self.get_argument_values()
+        try:
+            commit_exception = None
 
-            # Create Instance
-            instance = self.model(**values)
+            with self.model.session.begin_nested():
+                values = self.get_argument_values()
 
-            # Commit
-            self.model.session.commit()
+                # Create Instance
+                instance = self.model(**values)
 
-            # Refresh
-            self.model.session.refresh(instance)
+                # Commit
+                try:
+                    self.model.session.commit()
+                except SQLAlchemyError:
+                    self.model.session.rollback()
+                    self.send_error(status_code=400, exc_info=sys.exc_info())
+                    return
 
-            # Set Status
-            self.set_status(201)
+                # Refresh
+                self.model.session.refresh(instance)
 
-            # To Dict
-            self.write(self.to_dict(instance,
-                                    include_columns=self.include_columns,
-                                    include_relations=self.include_relations,
-                                    exclude_columns=self.exclude_columns,
-                                    exclude_relations=self.exclude_relations))
+                # Set Status
+                self.set_status(201)
+
+                # To Dict
+                self.write(self.to_dict(instance,
+                                        include_columns=self.include_columns,
+                                        include_relations=self.include_relations,
+                                        exclude_columns=self.exclude_columns,
+                                        exclude_relations=self.exclude_relations))
+        except SQLAlchemyError as ex:
+            logging.error(ex)
+            self.model.session.rollback()
 
     def get_content_encoding(self):
         """
@@ -483,7 +508,7 @@ class BaseHandler(RequestHandler):
         else:
             return default
 
-    def get_argument(self, name: str, **kwargs):
+    def get_argument(self, name: str, *args, **kwargs):
         """
             On PUT/PATCH many request parameter may be located in body instead of query
 
@@ -491,10 +516,10 @@ class BaseHandler(RequestHandler):
             :param kwargs: Additional parameters @see tornado.web.RequestHandler.get_argument
         """
         try:
-            return super().get_argument(name, **kwargs)
+            return super().get_argument(name, *args, **kwargs)
         except HTTPError:
             if name == "q" and self.request.method in ['PUT', 'PATCH']:
-                return self.get_body_argument(name, **kwargs)
+                return self.get_body_argument(name, *args, **kwargs)
             else:
                 raise
 
@@ -588,9 +613,7 @@ class BaseHandler(RequestHandler):
         """
 
         if not 'get' in self.methods:
-            self.logger.warning('GET was not allowed in %s' % self.methods)
-            self.send_error(405)
-            return
+            raise MethodNotAllowedError(self.request.method)
 
         if pks is None:
             self.get_many()
