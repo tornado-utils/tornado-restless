@@ -233,7 +233,8 @@ class BaseHandler(RequestHandler):
                 self.set_status(400, reason='SQLAlchemy: Bad Request')
             elif issubclass(exc_type, IllegalArgumentError):
                 self.set_status(400, reason='Restless: Bad Arguments')
-            self.finish({'type': exc_type.__name__, 'message': "%s" % exc_value})
+            self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
+                             message="%s" % exc_value, **exc_value.__dict__))
         else:
             super().write_error(status_code, **kwargs)
 
