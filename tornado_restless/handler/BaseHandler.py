@@ -229,12 +229,16 @@ class BaseHandler(RequestHandler):
             print_exception(*kwargs['exc_info'])
             if issubclass(exc_type, HTTPError) and exc_value.reason:
                 self.set_status(status_code, reason=exc_value.reason)
+                self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
+                                 message="%s" % exc_value, **exc_value.__dict__))
             elif issubclass(exc_type, SQLAlchemyError):
                 self.set_status(400, reason='SQLAlchemy: Bad Request')
+                self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
+                                 message="%s" % exc_value))
             elif issubclass(exc_type, IllegalArgumentError):
                 self.set_status(400, reason='Restless: Bad Arguments')
-            self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
-                             message="%s" % exc_value, **exc_value.__dict__))
+                self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
+                                 message="%s" % exc_value))
         else:
             super().write_error(status_code, **kwargs)
 
@@ -715,9 +719,13 @@ class BaseHandler(RequestHandler):
         if isinstance(instance, str):
             return instance
 
-        # Any Dictionary Object
+        # Any Dictionary Object (e.g. _AssociationDict)
         if hasattr(instance, 'items'):
             return {k: self.to_dict(v) for k, v in instance.items()}
+
+        # Iterable (e.g. _AssociationList)
+        if hasattr(instance, '__iter__'):
+            return [self.to_dict(x) for x in instance]
 
         # Include Columns given
         if include_columns is not None:
