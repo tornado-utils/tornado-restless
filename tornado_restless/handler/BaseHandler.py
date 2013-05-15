@@ -703,13 +703,13 @@ class BaseHandler(RequestHandler):
         if instance is None:
             return None
 
-        # List
+        # Plain List [Continue deepness]
         if isinstance(instance, list):
-            return [self.to_dict(x) for x in instance]
+            return [self.to_dict(x, include_relations=include_relations) for x in instance]
 
-        # Dictionary
+        # Plain Dictionary [Continue deepness]
         if isinstance(instance, dict):
-            return {k: self.to_dict(v) for k, v in instance.items()}
+            return {k: self.to_dict(v, include_relations=include_relations) for k, v in instance.items()}
 
         # Int
         if isinstance(instance, int):
@@ -719,13 +719,13 @@ class BaseHandler(RequestHandler):
         if isinstance(instance, str):
             return instance
 
-        # Any Dictionary Object (e.g. _AssociationDict)
-        if hasattr(instance, 'items'):
-            return {k: self.to_dict(v) for k, v in instance.items()}
+        # Any Dictionary Object (e.g. _AssociationDict) [Stop deepness]
+        if isinstance(instance, dict) or hasattr(instance, 'items'):
+            return {k: self.to_dict(v, include_relations=()) for k, v in instance.items()}
 
-        # Iterable (e.g. _AssociationList)
-        if hasattr(instance, '__iter__'):
-            return [self.to_dict(x) for x in instance]
+        # Any Iterable Object (e.g. _AssociationList) [Stop deepness]
+        if isinstance(instance, list) or hasattr(instance, '__iter__'):
+            return [self.to_dict(x, include_relations=()) for x in instance]
 
         # Include Columns given
         if include_columns is not None:
@@ -746,37 +746,41 @@ class BaseHandler(RequestHandler):
 
         # SQLAlchemy instance?
         try:
-            include_columns = [p.key for p in self.model.get_columns(object_mapper(instance))]
-            include_relations = [p.key for p in self.model.get_relations(object_mapper(instance))]
-            include_proxies = [p.key for p in self.model.get_proxies(object_mapper(instance))]
-            include_hybrids = [p.key for p in self.model.get_hybrids(object_mapper(instance))]
+            get_columns = [p.key for p in self.model.get_columns(object_mapper(instance))]
+            get_relations = [p.key for p in self.model.get_relations(object_mapper(instance))]
+            get_proxies = [p.key for p in self.model.get_proxies(object_mapper(instance))]
+            get_hybrids = [p.key for p in self.model.get_hybrids(object_mapper(instance))]
 
             rtn = {}
 
             # Include Columns
-            for column in include_columns:
+            for column in get_columns:
                 if not column in exclude_columns:
                     rtn[column] = self.to_dict(getattr(instance, column))
 
-            # Include AssociationProxy
-            for column in include_proxies:
-                if not column in exclude_columns:
+            # Include AssociationProxy (may be list/dict/col so check for exclude_relations and exclude_columns)
+            for column in get_proxies:
+                if exclude_relations is not None and column in exclude_relations:
+                    continue
+                if exclude_columns is not None and column in exclude_columns:
+                    continue
+                if include_relations is None or column in include_relations:
                     try:
                         rtn[column] = self.to_dict(getattr(instance, column))
                     except AttributeError:
                         rtn[column] = None
 
             # Include Hybrid Properties
-            for column in include_hybrids:
+            for column in get_hybrids:
                 if not column in exclude_columns:
                     rtn[column] = self.to_dict(getattr(instance, column))
 
             # Include Relations but only one deep
-            for column in include_relations:
+            for column in get_relations:
                 if exclude_relations is not None and column in exclude_relations:
                     continue
                 if include_relations is None or column in include_relations:
-                    rtn[column] = self.to_dict(getattr(instance, column), include_relations=[])
+                    rtn[column] = self.to_dict(getattr(instance, column), include_relations=())
 
             return rtn
         except UnmappedInstanceError:
