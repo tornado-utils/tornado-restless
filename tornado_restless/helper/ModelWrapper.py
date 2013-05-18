@@ -67,11 +67,11 @@ class ModelWrapper(object):
         """
         if hasattr(instance, 'iterate_properties'):
             return [field for field in instance.iterate_properties
-                    if isinstance(field, ColumnProperty) and not 'hidden' in field.info]
+                    if isinstance(field, ColumnProperty)]
         else:
             return [field for key, field in inspect.getmembers(instance)
                     if isinstance(field, QueryableAttribute)
-                       and isinstance(field.property, ColumnProperty) and not 'hidden' in field.info]
+                       and isinstance(field.property, ColumnProperty)]
 
     @property
     def columns(self):
