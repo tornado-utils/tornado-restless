@@ -8,7 +8,7 @@ import inspect
 from sqlalchemy import inspect as sqinspect
 from sqlalchemy.ext.associationproxy import AssociationProxy
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import ColumnProperty
+from sqlalchemy.orm import ColumnProperty, Query
 from sqlalchemy.orm.attributes import QueryableAttribute
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.properties import RelationProperty
@@ -179,15 +179,16 @@ class SessionedModelWrapper(ModelWrapper):
             instance = instance.offset(offset)
         return instance.one()
 
-    def all(self, offset: int=None, limit: int=None, filters: list=()) -> list:
+    @staticmethod
+    def get_all(instance: Query, offset: int=None, limit: int=None, filters: list=()) -> list:
         """
-            Gets all instances of the model filtered by filters
+            Gets all instances of the query instance
 
+            :param instance: sqlalchemy queriable
             :param offset: Offset for request
             :param limit: Limit for request
             :param filters: Filters and OrderBy Clauses
         """
-        instance = self.session.query(self.model)
         for expression in filters:
             if is_ordering_modifier(expression.operator):
                 instance = instance.order_by(expression)
@@ -198,6 +199,17 @@ class SessionedModelWrapper(ModelWrapper):
         if limit is not None:
             instance = instance.limit(limit)
         return instance.all()
+
+    def all(self, offset: int=None, limit: int=None, filters: list=()) -> list:
+        """
+            Gets all instances of the model filtered by filters
+
+            :param offset: Offset for request
+            :param limit: Limit for request
+            :param filters: Filters and OrderBy Clauses
+        """
+        instance = self.session.query(self.model)
+        return self.get_all(instance, offset=offset, limit=limit, filters=filters)
 
     def update(self, values: dict, offset: int=None, limit: int=None, filters: list=()) -> int:
         """
