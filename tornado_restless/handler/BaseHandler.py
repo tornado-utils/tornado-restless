@@ -362,7 +362,8 @@ class BaseHandler(RequestHandler):
         # Modify Instances
         if self.get_query_argument("single", False):
             instance = self.model.one(filters=filters)
-            instance.delete()
+            self.model.session.delete(instance)
+            self.model.session.commit()
             num = 1
         else:
             num = self.model.delete(limit=limit, filters=filters)
@@ -384,8 +385,9 @@ class BaseHandler(RequestHandler):
         # Get Instance
         instance = self.model.get(pks.split(","))
 
-        # To Dict
-        instance.delete()
+        # Trigger deletion
+        self.model.session.delete(instance)
+        self.model.session.commit()
 
         # Status
         self.set_status(204, "Instance removed")
