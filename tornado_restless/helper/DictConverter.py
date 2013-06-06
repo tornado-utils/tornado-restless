@@ -3,6 +3,7 @@
 """
 
 """
+from datetime import datetime, date, time
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
 from tornado_restless.helper.ModelWrapper import ModelWrapper
@@ -47,6 +48,10 @@ def to_dict(instance,
     # String
     if isinstance(instance, str):
         return instance
+
+    # Date / Time
+    if isinstance(instance, datetime) or isinstance(instance, time) or isinstance(instance, date):
+        return instance.isoformat()
 
     # Any Dictionary Object (e.g. _AssociationDict) [Stop deepness]
     if isinstance(instance, dict) or hasattr(instance, 'items'):
