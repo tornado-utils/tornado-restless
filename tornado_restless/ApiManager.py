@@ -15,12 +15,11 @@ __date__ = '26.04.13 - 22:25'
 
 class ApiManager(object):
     METHODS_READ = frozenset(['GET'])
-    METHODS_WRITE = frozenset(['POST'])
-    METHODS_CREATE = frozenset(['PUT', 'PATCH'])
+    METHODS_MODIFY = frozenset(['POST', 'PUT', 'PATCH'])
     METHODS_DELETE = frozenset(['DELETE'])
 
-    METHODS_UPDATE = METHODS_READ | METHODS_WRITE
-    METHODS_ALL = METHODS_READ | METHODS_WRITE | METHODS_CREATE | METHODS_DELETE
+    METHODS_UPDATE = METHODS_READ | METHODS_MODIFY
+    METHODS_ALL = METHODS_READ | METHODS_MODIFY | METHODS_DELETE
 
     def __init__(self,
                  application: Application,
@@ -35,7 +34,7 @@ class ApiManager(object):
 
     def create_api_blueprint(self,
                              model,
-                             methods=frozenset(['GET']),
+                             methods=METHODS_READ,
                              url_prefix='/api',
                              collection_name=None,
                              allow_patch_many: bool=False,
@@ -83,7 +82,7 @@ class ApiManager(object):
                   'max_results_per_page': max_results_per_page}
 
         blueprint = URLSpec(
-            "%s/%s(?:/(.+))?" % (url_prefix, table_name),
+            "%s/%s(?:/(.+))?[/]?" % (url_prefix, table_name),
             handler_class,
             kwargs,
             '%s%s' % (blueprint_prefix, table_name))

@@ -431,7 +431,7 @@ class BaseHandler(RequestHandler):
 
                 # Commit
                 try:
-                    self.model.session.commit()
+                    self.model.session.flush()
                 except SQLAlchemyError:
                     self.model.session.rollback()
                     self.send_error(status_code=400, exc_info=sys.exc_info())
