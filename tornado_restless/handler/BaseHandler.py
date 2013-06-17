@@ -450,7 +450,7 @@ class BaseHandler(RequestHandler):
                                         exclude_columns=self.exclude_columns,
                                         exclude_relations=self.exclude_relations))
         except SQLAlchemyError as ex:
-            logging.error(ex)
+            logging.exception(ex)
             self.model.session.rollback()
 
     def get_content_encoding(self):
