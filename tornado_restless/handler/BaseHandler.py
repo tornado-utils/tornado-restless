@@ -654,9 +654,9 @@ class BaseHandler(RequestHandler):
         if results_per_page > self.max_results_per_page:
             raise IllegalArgumentError("request.results_per_page > application.max_results_per_page")
 
-        # Offset
+        # Offset & Page
         offset = self.get_query_argument("offset", 0)
-        page = self.get_query_argument("page", 1) - 1
+        page = int(self.get_argument("page", '1')) - 1
         offset += page * results_per_page
         if offset < 0:
             raise IllegalArgumentError("request.offset < 0")
