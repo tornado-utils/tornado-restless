@@ -216,7 +216,7 @@ class SessionedModelWrapper(ModelWrapper):
             if is_ordering_modifier(expression.operator):
                 instance = instance.order_by(expression)
             else:
-                instance = instance.filter_by(expression)
+                instance = instance.filter(expression)
         if offset is not None:
             instance = instance.offset(offset)
         if limit is not None:
@@ -283,7 +283,7 @@ class SessionedModelWrapper(ModelWrapper):
         """
         instance = self.session.query(self.model)
         for expression in filters:
-            instance = instance.filter_by(expression)
+            instance = instance.filter(expression)
         return instance.count()
 
     def get(self, primary_keys) -> object:

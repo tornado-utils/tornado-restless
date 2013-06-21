@@ -145,13 +145,15 @@ class BaseHandler(RequestHandler):
         alchemy_filters = []
         for argument_filter in argument_filters:
 
-            left = getattr(self.model, argument_filter["name"])
+            left = getattr(self.model.model, argument_filter["name"])
             op = argument_filter["op"]
 
             if "field" in argument_filter.keys():
-                right = getattr(self.model, argument_filter["field"])
+                right = getattr(self.model.model, argument_filter["field"])
             elif "val" in argument_filter.keys():
                 right = argument_filter["val"]
+            elif "value" in argument_filter.keys(): # Because we hate abbr sometimes ...
+                right = argument_filter["value"]
             else:
                 right = None
 
