@@ -5,6 +5,7 @@
 """
 from collections import namedtuple
 import inspect
+import logging
 from sqlalchemy import inspect as sqinspect
 from sqlalchemy.ext.associationproxy import AssociationProxy
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -26,19 +27,24 @@ class ModelWrapper(object):
     def __init__(self, model):
         self.model = model
 
-    def primary_key_names(self):
-        """
-            Returns the names of all primary keys
+    @property
+    def __name__(self):
+        return self.model.__name__
 
-            Inspired by flask-restless.helpers.primary_key_names
-        """
-        return [key for key, field in inspect.getmembers(self.model)
-                if isinstance(field, QueryableAttribute)
-                   and isinstance(field.property, ColumnProperty)
-            and field.property.columns[0].primary_key]
+    @property
+    def __tablename__(self):
+        return self.model.__tablename__
+
+    @property
+    def __collectionname__(self):
+        try:
+            return self.model.__collectionname__
+        except AttributeError:
+            logging.warning("Missing collection name for %s using tablename" % self.model.__name__)
+            return self.model.__tablename__
 
     @staticmethod
-    def get_primary_keys(instance):
+    def get_primary_keys(instance) -> list:
         """
             Returns the primary keys
 
@@ -46,10 +52,10 @@ class ModelWrapper(object):
 
             :param instance: Model ORM Instance
         """
-        return [field for key, field in inspect.getmembers(instance)
+        return {field.key: field for key, field in inspect.getmembers(instance)
                 if isinstance(field, QueryableAttribute)
                    and isinstance(field.property, ColumnProperty)
-            and field.property.columns[0].primary_key]
+        and field.property.columns[0].primary_key}
 
     @property
     def primary_keys(self):
@@ -59,7 +65,28 @@ class ModelWrapper(object):
         return self.get_primary_keys(self.model)
 
     @staticmethod
-    def get_columns(instance):
+    def get_foreign_keys(instance) -> list:
+        """
+            Returns the foreign keys
+
+            Inspired by flask-restless.helpers.primary_key_names
+
+            :param instance: Model ORM Instance
+        """
+        return {field.key: field for key, field in inspect.getmembers(instance)
+                if isinstance(field, QueryableAttribute)
+                   and isinstance(field.property, ColumnProperty)
+        and field.foreign_keys}
+
+    @property
+    def foreign_keys(self):
+        """
+        @see get_foreign_keys
+        """
+        return self.get_foreign_keys(self.model)
+
+    @staticmethod
+    def get_columns(instance) -> list:
         """
             Returns the columns objects of the model
 
@@ -71,7 +98,7 @@ class ModelWrapper(object):
         else:
             return [field for key, field in inspect.getmembers(instance)
                     if isinstance(field, QueryableAttribute)
-                       and isinstance(field.property, ColumnProperty)]
+                and isinstance(field.property, ColumnProperty)]
 
     @property
     def columns(self):
@@ -80,12 +107,8 @@ class ModelWrapper(object):
         """
         return self.get_columns(self.model)
 
-    @property
-    def column_names(self):
-        return [p.key for p in self.get_columns(self.model)]
-
     @staticmethod
-    def get_relations(instance):
+    def get_relations(instance) -> list:
         """
             Returns the relations objects of the model
 
@@ -107,7 +130,7 @@ class ModelWrapper(object):
         return self.get_relations(self.model)
 
     @staticmethod
-    def get_hybrids(instance):
+    def get_hybrids(instance) -> list:
         """
             Returns the relations objects of the model
 
@@ -129,7 +152,7 @@ class ModelWrapper(object):
         return self.get_hybrids(self.model)
 
     @staticmethod
-    def get_proxies(instance):
+    def get_proxies(instance) -> list:
         """
             Returns the proxies objects of the model
 
