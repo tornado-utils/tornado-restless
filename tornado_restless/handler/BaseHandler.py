@@ -302,32 +302,45 @@ class BaseHandler(RequestHandler):
 
             :param pks: query argument of request (list of primary keys, comma seperated)
         """
+        try:
+            with self.model.session.begin_nested():
+                values = self.get_argument_values()
 
-        # Flush
-        self.model.session.flush()
+                # Get Instance
+                instance = self.model.get(pks.split(","))
 
-        # Get values
-        values = self.get_argument_values()
+                # Set Values
+                for (key, value) in values.items():
+                    self.logger.debug("%r.%s => %s" % (instance, key, value))
+                    setattr(instance, key, value)
 
-        # Get Instance
-        instance = self.model.get(pks.split(","))
-        for (key, value) in values.items():
-            logging.debug("%s => %s" % (key, value))
-            setattr(instance, key, value)
+                # Flush
+                try:
+                    self.model.session.flush()
+                except SQLAlchemyError as ex:
+                    logging.exception(ex)
+                    self.model.session.rollback()
+                    self.send_error(status_code=400, exc_info=sys.exc_info())
+                    return
 
-        # Commit
-        self.model.session.commit()
+                # Refresh
+                self.model.session.refresh(instance)
 
-        # Refresh
-        self.model.session.refresh(instance)
+                # Set Status
+                self.set_status(201, "Patched")
 
-        # Result
-        self.set_status(201, "Patched")
-        self.write(self.to_dict(instance,
-                                include_columns=self.include_columns,
-                                include_relations=self.include_relations,
-                                exclude_columns=self.exclude_columns,
-                                exclude_relations=self.exclude_relations))
+                # To Dict
+                self.write(self.to_dict(instance,
+                                        include_columns=self.include_columns,
+                                        include_relations=self.include_relations,
+                                        exclude_columns=self.exclude_columns,
+                                        exclude_relations=self.exclude_relations))
+
+            # Commit
+            self.model.session.commit()
+        except SQLAlchemyError as ex:
+            logging.exception(ex)
+            self.send_error(status_code=400, exc_info=sys.exc_info())
 
     def delete(self, pks=None):
         """
@@ -412,7 +425,7 @@ class BaseHandler(RequestHandler):
         else:
             self.patch_single(pks)
 
-    def post(self, pks=None):
+    def post(self, pks: str=None):
         """
             POST (new input) request
 
@@ -423,18 +436,17 @@ class BaseHandler(RequestHandler):
             raise MethodNotAllowedError(self.request.method)
 
         try:
-            commit_exception = None
-
             with self.model.session.begin_nested():
                 values = self.get_argument_values()
 
                 # Create Instance
                 instance = self.model(**values)
 
-                # Commit
+                # Flush
                 try:
                     self.model.session.flush()
-                except SQLAlchemyError:
+                except SQLAlchemyError as ex:
+                    logging.exception(ex)
                     self.model.session.rollback()
                     self.send_error(status_code=400, exc_info=sys.exc_info())
                     return
@@ -443,7 +455,7 @@ class BaseHandler(RequestHandler):
                 self.model.session.refresh(instance)
 
                 # Set Status
-                self.set_status(201)
+                self.set_status(201, "Created")
 
                 # To Dict
                 self.write(self.to_dict(instance,
@@ -451,9 +463,11 @@ class BaseHandler(RequestHandler):
                                         include_relations=self.include_relations,
                                         exclude_columns=self.exclude_columns,
                                         exclude_relations=self.exclude_relations))
+                # Commit
+            self.model.session.commit()
         except SQLAlchemyError as ex:
             logging.exception(ex)
-            self.model.session.rollback()
+            self.send_error(status_code=400, exc_info=sys.exc_info())
 
     def get_content_encoding(self):
         """
