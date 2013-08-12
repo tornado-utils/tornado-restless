@@ -6,10 +6,111 @@
 from datetime import datetime, date, time
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
+from tornado_restless.helper.IllegalArgumentError import IllegalArgumentError
 from tornado_restless.helper.ModelWrapper import ModelWrapper
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '23.05.13 - 17:41'
+
+
+def to_filter(instance,
+              filters=None,
+              order_by=None):
+    """
+        Returns a list of filters made by arguments
+
+        :param instance:
+        :param filters: List of filters in restless 3-tuple op string format
+        :param order_by: List of orders to be appended aswell
+    """
+
+    # Get all provided filters
+    argument_filters = filters and filters or []
+
+    # Parse order by as filters
+    argument_orders = order_by and order_by or []
+    for argument_order in argument_orders:
+        direction = argument_order['direction']
+        if direction not in ["asc", "desc"]:
+            raise IllegalArgumentError("Direction unkown")
+        argument_filters.append({'name': argument_order['field'], 'op': direction})
+
+    # Create Alchemy Filters
+    alchemy_filters = []
+    for argument_filter in argument_filters:
+
+        left = getattr(instance, argument_filter["name"])
+        op = argument_filter["op"]
+
+        if "field" in argument_filter.keys():
+            right = getattr(instance, argument_filter["field"])
+        elif "val" in argument_filter.keys():
+            right = argument_filter["val"]
+        elif "value" in argument_filter.keys():  # Because we hate abbr sometimes ...
+            right = argument_filter["value"]
+        else:
+            right = None
+
+        # Operators from flask-restless
+        if op in ["is_null"]:
+            alchemy_filters.append(left.is_(None))
+        elif op in ["is_not_null"]:
+            alchemy_filters.append(left.isnot(None))
+        elif op in ["is"]:
+            alchemy_filters.append(left.is_(right))
+        elif op in ["is_not"]:
+            alchemy_filters.append(left.isnot(right))
+        elif op in ["==", "eq", "equals", "equals_to"]:
+            alchemy_filters.append(left == right)
+        elif op in ["!=", "ne", "neq", "not_equal_to", "does_not_equal"]:
+            alchemy_filters.append(left != right)
+        elif op in [">", "gt"]:
+            alchemy_filters.append(left > right)
+        elif op in ["<", "lt"]:
+            alchemy_filters.append(left < right)
+        elif op in [">=", "ge", "gte", "geq"]:
+            alchemy_filters.append(left >= right)
+        elif op in ["<=", "le", "lte", "leq"]:
+            alchemy_filters.append(left <= right)
+        elif op in ["ilike"]:
+            alchemy_filters.append(left.ilike(right))
+        elif op in ["not_ilike"]:
+            alchemy_filters.append(left.notilike(right))
+        elif op in ["like"]:
+            alchemy_filters.append(left.like(right))
+        elif op in ["not_like"]:
+            alchemy_filters.append(left.notlike(right))
+        elif op in ["match"]:
+            alchemy_filters.append(left.match(right))
+        elif op in ["in"]:
+            alchemy_filters.append(left.in_(right))
+        elif op in ["not_in"]:
+            alchemy_filters.append(left.notin_(right))
+        elif op in ["has"]:
+            alchemy_filters.append(left.has(right))
+        elif op in ["any"]:
+            alchemy_filters.append(left.any(right))
+
+        # Additional Operators
+        elif op in ["between"]:
+            alchemy_filters.append(left.between(*right))
+        elif op in ["contains"]:
+            alchemy_filters.append(left.contains(right))
+        elif op in ["startswith"]:
+            alchemy_filters.append(left.startswith(right))
+        elif op in ["endswith"]:
+            alchemy_filters.append(left.endswith(right))
+
+        # Order By Operators
+        elif op in ["asc"]:
+            alchemy_filters.append(left.asc())
+        elif op in ["desc"]:
+            alchemy_filters.append(left.asc())
+
+        # Raise Exception
+        else:
+            raise IllegalArgumentError("Unknown operator")
+    return alchemy_filters
 
 
 def to_dict(instance,
