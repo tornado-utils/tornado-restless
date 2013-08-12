@@ -1,5 +1,4 @@
 tornado-restless
-
 ================
 
 Inspired on flask-restless this is a sqlalchemy restless api wrapper for tornado.
@@ -12,10 +11,9 @@ In many details this implementation follows the documentation of Flask-Restless:
 
 https://flask-restless.readthedocs.org/en/latest/index.html
 
-However there may some restrictions that I did not explored yet.
+However there are some restrictions that are currently not implemented (like processors) or are slightly differ.
 
 Copyright license
-
 =================
 
 flask-restless was dual licensed under the GNU Affero General Public License and 3-clause BSD License.
@@ -23,7 +21,6 @@ flask-restless was dual licensed under the GNU Affero General Public License and
 tornado-restless is licensed under the GNU Affero General Public License, for more information see the LICENSE.txt.
 
 Installing
-
 ==========
 
 tornado-restless was developed under python3.3, sqlalchemy0.8 and tornado3.0
@@ -35,7 +32,6 @@ To install this library as an egg use:
     python setup.py install
 
 Quickstart
-
 ==========
 
     import tornado.ioloop
