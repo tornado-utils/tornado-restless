@@ -198,7 +198,7 @@ class BaseHandler(RequestHandler):
                 alchemy_filters.append(left.any(right))
 
             # Additional Operators
-            if op in ["between"]:
+            elif op in ["between"]:
                 alchemy_filters.append(left.between(*right))
             elif op in ["contains"]:
                 alchemy_filters.append(left.contains(right))
@@ -208,10 +208,14 @@ class BaseHandler(RequestHandler):
                 alchemy_filters.append(left.endswith(right))
 
             # Order By Operators
-            if op in ["asc"]:
+            elif op in ["asc"]:
                 alchemy_filters.append(left.asc())
             elif op in ["desc"]:
                 alchemy_filters.append(left.asc())
+
+            # Raise Exception
+            else:
+                raise IllegalArgumentError("Unknown operator")
         return alchemy_filters
 
     def write_error(self, status_code: int, **kwargs):
