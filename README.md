@@ -35,55 +35,37 @@ Quickstart
 ==========
 
     import tornado.ioloop
-
     import tornado.web
 
     from tornado_restless import ApiManager
-
     from sqlalchemy import create_engine, schema, Column
-
     from sqlalchemy.types import Integer, String
-
     from sqlalchemy.orm import sessionmaker
-
     from sqlalchemy.ext.declarative import declarative_base
 
     # Init Tornado Application
-
     application = tornado.web.Application([])
 
     # Init SQLAlchemy
-
     engine = create_engine('sqlite:///:memory:')
-
     metadata = schema.MetaData()
-
     Session = sessionmaker(bind=engine)
-
     Base = declarative_base(metadata=metadata)
-
     session = Session()
 
     # Create some model
-
     class Person(Base):
-
        __tablename__ = 'persons'
 
        id = Column(Integer, primary_key=True)
-
        name = Column(String, unique=True)
 
     metadata.create_all(engine)
 
     # Create restless api handlers
-
     api = ApiManager(application=application, session=session)
-
     api.create_api(Person)
 
     if __name__ == "__main__":
-
        application.listen(8888)
-
        tornado.ioloop.IOLoop.instance().start()
