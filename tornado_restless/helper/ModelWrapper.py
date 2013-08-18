@@ -7,16 +7,44 @@ from collections import namedtuple
 import inspect
 import logging
 from sqlalchemy import inspect as sqinspect
+from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.ext.associationproxy import AssociationProxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import ColumnProperty, Query
 from sqlalchemy.orm.attributes import QueryableAttribute
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.orm.properties import RelationProperty
+from sqlalchemy.orm.interfaces import MapperProperty
+from sqlalchemy.orm.properties import RelationshipProperty
 from sqlalchemy.sql.operators import is_ordering_modifier
+from sqlalchemy.util import memoized_property
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '27.04.13 - 00:14'
+
+
+def _filter(instance, condition):
+    """
+        Filter properties of instace based on condition
+
+        :param instance:
+        :param condition:
+        :rtype: dict
+    """
+
+    # Use iterate_properties when available
+    if hasattr(instance, 'iterate_properties'):
+        return {field.key: field for field in instance.iterate_properties
+                if condition(field)}
+
+    # Try sqlalchemy inspection
+    try:
+        return {field.key: field for key, field in sqinspect(instance).all_orm_descriptors.items()
+                if condition(field)}
+
+    # Use Inspect
+    except NoInspectionAvailable:
+        return {field.key: field for key, field in inspect.getmembers(instance)
+                if condition(field)}
 
 
 class ModelWrapper(object):
@@ -52,17 +80,34 @@ class ModelWrapper(object):
 
             :param instance: Model ORM Instance
         """
-        return {field.key: field for key, field in inspect.getmembers(instance)
-                if isinstance(field, QueryableAttribute)
-                   and isinstance(field.property, ColumnProperty)
-        and field.property.columns[0].primary_key}
+        return _filter(instance, lambda field: isinstance(field, ColumnProperty) and field.primary_key or (
+            isinstance(field, QueryableAttribute) and isinstance(field.property, ColumnProperty) and field.property.columns[0].primary_key))
 
-    @property
+    @memoized_property
     def primary_keys(self):
         """
         @see get_primary_keys
         """
         return self.get_primary_keys(self.model)
+
+    @staticmethod
+    def get_unique_keys(instance) -> list:
+        """
+            Returns the primary keys
+
+            Inspired by flask-restless.helpers.primary_key_names
+
+            :param instance: Model ORM Instance
+        """
+        return _filter(instance, lambda field: isinstance(field, ColumnProperty) and field.unique or (
+            isinstance(field, QueryableAttribute) and isinstance(field.property, ColumnProperty) and field.property.columns[0].unique))
+
+    @memoized_property
+    def unique_keys(self):
+        """
+        @see get_primary_keys
+        """
+        return self.get_unique_keys(self.model)
 
     @staticmethod
     def get_foreign_keys(instance) -> list:
@@ -78,7 +123,7 @@ class ModelWrapper(object):
                    and isinstance(field.property, ColumnProperty)
         and field.foreign_keys}
 
-    @property
+    @memoized_property
     def foreign_keys(self):
         """
         @see get_foreign_keys
@@ -92,20 +137,32 @@ class ModelWrapper(object):
 
             :param instance: Model ORM Instance
         """
-        if hasattr(instance, 'iterate_properties'):
-            return [field for field in instance.iterate_properties
-                    if isinstance(field, ColumnProperty)]
-        else:
-            return [field for key, field in inspect.getmembers(instance)
-                    if isinstance(field, QueryableAttribute)
-                and isinstance(field.property, ColumnProperty)]
+        return _filter(instance, lambda field: isinstance(field, ColumnProperty) or (
+            isinstance(field, QueryableAttribute) and isinstance(field.property, ColumnProperty)))
 
-    @property
+    @memoized_property
     def columns(self):
         """
         @see get_columns
         """
         return self.get_columns(self.model)
+
+    @staticmethod
+    def get_attributes(instance) -> list:
+        """
+            Returns the attributes of the model
+
+            :param instance: Model ORM Instance
+        """
+        return _filter(instance,
+                       lambda field: isinstance(field, MapperProperty) or isinstance(field, QueryableAttribute))
+
+    @memoized_property
+    def attributes(self):
+        """
+        @see get_attributes
+        """
+        return self.get_attributes(self.model)
 
     @staticmethod
     def get_relations(instance) -> list:
@@ -114,15 +171,10 @@ class ModelWrapper(object):
 
             :param instance: Model ORM Instance
         """
-        if hasattr(instance, 'iterate_properties'):
-            return [field for field in instance.iterate_properties
-                    if isinstance(field, RelationProperty)]
-        else:
-            return [field for key, field in inspect.getmembers(instance)
-                    if isinstance(field, QueryableAttribute)
-                and isinstance(field.property, RelationProperty)]
+        return _filter(instance, lambda field: isinstance(field, RelationshipProperty) or (
+            isinstance(field, QueryableAttribute) and isinstance(field.property, RelationshipProperty)))
 
-    @property
+    @memoized_property
     def relations(self):
         """
         @see get_relations
@@ -144,7 +196,7 @@ class ModelWrapper(object):
             return [Proxy(key, field) for key, field in inspect.getmembers(instance)
                     if isinstance(field, hybrid_property)]
 
-    @property
+    @memoized_property
     def hybrids(self):
         """
         @see get_hybrids
@@ -168,7 +220,7 @@ class ModelWrapper(object):
             return [Proxy(key, field) for key, field in inspect.getmembers(instance)
                     if isinstance(field, AssociationProxy)]
 
-    @property
+    @memoized_property
     def proxies(self):
         """
         @see get_proxies

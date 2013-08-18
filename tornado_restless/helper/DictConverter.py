@@ -181,8 +181,9 @@ def to_dict(instance,
 
     # SQLAlchemy instance?
     try:
-        get_columns = [p.key for p in ModelWrapper.get_columns(object_mapper(instance))]
-        get_relations = [p.key for p in ModelWrapper.get_relations(object_mapper(instance))]
+        get_columns = ModelWrapper.get_columns(object_mapper(instance)).keys()
+        get_relations = ModelWrapper.get_relations(object_mapper(instance)).keys()
+        get_attributes = ModelWrapper.get_attributes(object_mapper(instance)).keys()
         get_proxies = [p.key for p in ModelWrapper.get_proxies(object_mapper(instance))]
         get_hybrids = [p.key for p in ModelWrapper.get_hybrids(object_mapper(instance))]
 
@@ -216,6 +217,23 @@ def to_dict(instance,
                 continue
             if include_relations is None or column in include_relations:
                 rtn[column] = to_dict(getattr(instance, column), include_relations=())
+
+        # Try to include everything else
+        for column in get_attributes:
+            if column in get_relations or column in get_hybrids or column in get_proxies:
+                continue
+            if column in get_columns:
+                continue
+
+            if exclude_relations is not None and column in exclude_relations:
+                continue
+            if exclude_columns is not None and column in exclude_columns:
+                continue
+
+            try:
+                rtn[column] = to_dict(getattr(instance, column))
+            except AttributeError:
+                rtn[column] = None
 
         return rtn
     except UnmappedInstanceError as ex:
