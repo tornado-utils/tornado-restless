@@ -6,8 +6,8 @@
 from datetime import datetime, date, time
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
-from tornado_restless.helper.IllegalArgumentError import IllegalArgumentError
-from tornado_restless.helper.ModelWrapper import ModelWrapper
+from helper.IllegalArgumentError import IllegalArgumentError
+from helper.ModelWrapper import ModelWrapper
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '23.05.13 - 17:41'
@@ -142,16 +142,12 @@ def to_dict(instance,
     if isinstance(instance, dict):
         return {k: to_dict(v, include_relations=include_relations) for k, v in instance.items()}
 
-    # Int
-    if isinstance(instance, int):
+    # Int / Float / Str
+    if isinstance(instance, (int, float, str)):
         return instance
 
-    # String
-    if isinstance(instance, str):
-        return instance
-
-    # Date / Time
-    if isinstance(instance, datetime) or isinstance(instance, time) or isinstance(instance, date):
+    # Date & Time
+    if isinstance(instance, (datetime, time, date)):
         return instance.isoformat()
 
     # Any Dictionary Object (e.g. _AssociationDict) [Stop deepness]
