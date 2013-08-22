@@ -93,18 +93,21 @@ class TestBase(object):
                         'flask': self.flask.test_client()}
         self.threads['tornado'].start()
 
-    def curl_tornado(self, url, method='get', **kwargs):
+    def curl_tornado(self, url, method='get', assert_for=200, **kwargs):
         url = urljoin('http://localhost:%u' % self.config['tornado']['port'], url)
         r = getattr(requests, method)(url, **kwargs)
-        r.raise_for_status()
+        if assert_for == 200:
+            r.raise_for_status()
+        else:
+            assert assert_for == r.status_code
         try:
             return r.json()
         finally:
             r.close()
 
-    def curl_flask(self, url, method='get', **kwargs):
+    def curl_flask(self, url, method='get', assert_for=200, **kwargs):
         r = getattr(self.threads['flask'], method)(url, **kwargs)
-        assert 200 == r.status_code
+        assert assert_for == r.status_code
         return loads(r.data.decode(self.config['encoding']))
 
     def setUpAlchemy(self):

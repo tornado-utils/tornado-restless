@@ -6,8 +6,9 @@
 from datetime import datetime, date, time
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
-from helper.IllegalArgumentError import IllegalArgumentError
-from helper.ModelWrapper import ModelWrapper
+
+from .IllegalArgumentError import IllegalArgumentError
+from .ModelWrapper import ModelWrapper
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '23.05.13 - 17:41'

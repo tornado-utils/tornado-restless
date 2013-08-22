@@ -29,6 +29,10 @@ class TestGet(TestBase):
         self.subsetOf(flask_data, tornado_data)
 
     def test_single(self):
+        """
+            Test for a specific persons per pk
+        """
+
         flask_data = self.curl_flask('/api/persons/1')
         tornado_data = self.curl_tornado('/api/persons/1')
 
@@ -36,3 +40,10 @@ class TestGet(TestBase):
         logging.debug(tornado_data)
 
         self.subsetOf(flask_data, tornado_data)
+
+    def test_nothing(self):
+        """
+            Test for some missing data
+        """
+
+        self.curl_tornado('/api/persons/1337', assert_for=400)

@@ -17,7 +17,10 @@ import sys
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import UnmappedInstanceError
 from tornado.web import RequestHandler, HTTPError
-from tornado_restless.helper.DictConverter import to_dict, to_filter
+
+from ..helper.DictConverter import to_dict, to_filter
+from ..helper.IllegalArgumentError import IllegalArgumentError
+from ..helper.ModelWrapper import SessionedModelWrapper
 
 
 try:
@@ -35,9 +38,6 @@ except ImportError:
             super().__init__(status_code, log_message, *args, **kwargs)
             self.method = method
 
-from ..helper.IllegalArgumentError import IllegalArgumentError
-from ..helper.ModelWrapper import SessionedModelWrapper
-
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '26.04.13 - 22:09'
 
@@ -52,7 +52,7 @@ class BaseHandler(RequestHandler):
     # noinspection PyMethodOverriding
     def initialize(self,
                    model,
-                   session,
+                   manager,
                    methods,
                    allow_patch_many,
                    allow_method_override,
@@ -65,7 +65,7 @@ class BaseHandler(RequestHandler):
 
         :param model: The Model for which this handler has been created
         :param methods:
-        :param session:
+        :param manager:
         :param allow_patch_many:
         :param allow_method_override:
         :param validation_exceptions:
@@ -81,7 +81,7 @@ class BaseHandler(RequestHandler):
 
         super().initialize()
 
-        self.model = SessionedModelWrapper(model, session)
+        self.model = SessionedModelWrapper(model, manager.session)
         self.methods = [method.lower() for method in methods]
         self.allow_patch_many = allow_patch_many
         self.validation_exceptions = validation_exceptions
@@ -610,7 +610,7 @@ class BaseHandler(RequestHandler):
 
         # Num Results
         num_results = self.model.count(filters=filters)
-        num_pages = ceil(num_results / results_per_page)
+        total_pages = ceil(num_results / results_per_page)
 
         # Get Instances
         if self.get_query_argument("single", False):
@@ -619,7 +619,7 @@ class BaseHandler(RequestHandler):
             instances = self.model.all(offset=offset, limit=limit, filters=filters)
 
         self.write({'num_results': num_results,
-                    "num_pages": num_pages,
+                    "total_pages": total_pages,
                     "page": page + 1,
                     "objects": self.to_dict(instances,
                                             include_columns=self.include_columns,
@@ -645,7 +645,8 @@ class BaseHandler(RequestHandler):
             return to_dict(instance=instance,
                            include_columns=include_columns, include_relations=include_relations,
                            exclude_columns=exclude_columns, exclude_relations=exclude_relations)
-        except UnmappedInstanceError:
+        except UnmappedInstanceError as ex:
+            self.logger.error(ex)
             self.logger.info("Possible unkown instance type: %s" % type(instance))
             return instance
 
