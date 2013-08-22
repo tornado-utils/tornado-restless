@@ -7,8 +7,8 @@ import sqlalchemy.orm
 from sqlalchemy.util import memoized_property
 from tornado.web import Application, URLSpec
 
-from .handler.BaseHandler import BaseHandler
-from .helper.IllegalArgumentError import IllegalArgumentError
+from .handler import BaseHandler
+from .errors import IllegalArgumentError
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '26.04.13 - 22:25'
