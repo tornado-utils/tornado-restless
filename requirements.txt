@@ -1,2 +1,2 @@
-sqlalchemy
-tornado
+sqlalchemy>0.8
+tornado>=3.1

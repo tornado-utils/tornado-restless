@@ -36,6 +36,7 @@ nosetests.xml
 
 # intelliJ
 .idea
+*.iml
 
 # system
 nohup.out
