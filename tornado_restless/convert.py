@@ -40,9 +40,7 @@ def to_filter(instance,
     alchemy_filters = []
     for argument_filter in argument_filters:
 
-        left = getattr(instance, argument_filter["name"])
-        op = argument_filter["op"]
-
+        # Resolve right attribute
         if "field" in argument_filter.keys():
             right = getattr(instance, argument_filter["field"])
         elif "val" in argument_filter.keys():
@@ -51,6 +49,22 @@ def to_filter(instance,
             right = argument_filter["value"]
         else:
             right = None
+
+        # Operator
+        op = argument_filter["op"]
+
+        # Resolve left attribute
+        if "name" not in argument_filter:
+            raise IllegalArgumentError("Missing fieldname attribute 'name'")
+
+        if "__" in argument_filter["name"] or "." in argument_filter["name"]:
+            relation, _, name = argument_filter["name"].replace("__", ".").partition(".")
+            left = getattr(instance, relation)
+            op = "has"
+            argument_filter["name"] = name
+            right = to_filter(instance=left.property.mapper.class_, filters=[argument_filter])
+        else:
+            left = getattr(instance, argument_filter["name"])
 
         # Operators from flask-restless
         if op in ["is_null"]:
@@ -87,6 +101,8 @@ def to_filter(instance,
             alchemy_filters.append(left.in_(right))
         elif op in ["not_in"]:
             alchemy_filters.append(left.notin_(right))
+        elif op in ["has"] and isinstance(right, list):
+            alchemy_filters.append(left.has(*right))
         elif op in ["has"]:
             alchemy_filters.append(left.has(right))
         elif op in ["any"]:
