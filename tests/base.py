@@ -106,6 +106,12 @@ class TestBase(object):
             r.close()
 
     def curl_flask(self, url, method='get', assert_for=200, **kwargs):
+
+        # Map request parameter params to environ param query_string
+        if 'params' in kwargs:
+            kwargs['query_string'] = kwargs['params']
+            del kwargs['params']
+
         r = getattr(self.threads['flask'], method)(url, **kwargs)
         assert assert_for == r.status_code
         return loads(r.data.decode(self.config['encoding']))
@@ -169,8 +175,9 @@ class TestBase(object):
         claudia = Person('Claudia', 20)
         dennise = Person('Dennise', 14)
         emil = Person('Emil', 81)
+        feris = Person('Feris', 10)
 
-        self.persons = {p.name: p for p in [anastacia, bernd, claudia, dennise, emil]}
+        self.persons = {p.name: p for p in [anastacia, bernd, claudia, dennise, emil, feris]}
 
         a1 = Computer(user=anastacia, cpu=3.2, ram=4)
         a2 = Computer(user=anastacia, cpu=12, ram=4)

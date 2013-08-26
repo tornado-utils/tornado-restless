@@ -47,6 +47,20 @@ def _filter(instance, condition):
                 if condition(field)}
 
 
+def _is_ordering_expression(expression):
+    """
+        Test an expression whether it is an ordering clause
+    """
+
+    if hasattr(expression, 'operator') and is_ordering_modifier(expression.operator):
+        return True
+
+    if hasattr(expression, 'modifier') and is_ordering_modifier(expression.modifier):
+        return True
+
+    return False
+
+
 class ModelWrapper(object):
     """
         Wrapper around sqlalchemy model for having some easier functions
@@ -246,7 +260,7 @@ class SessionedModelWrapper(ModelWrapper):
         """
         instance = self.session.query(self.model)
         for expression in filters:
-            if is_ordering_modifier(expression.operator):
+            if _is_ordering_expression(expression):
                 instance = instance.order_by(expression)
             else:
                 instance = instance.filter_by(expression)
@@ -265,7 +279,7 @@ class SessionedModelWrapper(ModelWrapper):
             :param filters: Filters and OrderBy Clauses
         """
         for expression in filters:
-            if is_ordering_modifier(expression.operator):
+            if _is_ordering_expression(expression):
                 instance = instance.order_by(expression)
             else:
                 instance = instance.filter(expression)
@@ -297,7 +311,7 @@ class SessionedModelWrapper(ModelWrapper):
         """
         instance = self.session.query(self.model)
         for expression in filters:
-            if is_ordering_modifier(expression.operator):
+            if _is_ordering_expression(expression):
                 instance = instance.order_by(expression)
             else:
                 instance = instance.filter_by(expression)
@@ -317,7 +331,7 @@ class SessionedModelWrapper(ModelWrapper):
         """
         instance = self.session.query(self.model)
         for expression in filters:
-            if is_ordering_modifier(expression.operator):
+            if _is_ordering_expression(expression):
                 instance = instance.order_by(expression)
             else:
                 instance = instance.filter_by(expression)
@@ -335,7 +349,10 @@ class SessionedModelWrapper(ModelWrapper):
         """
         instance = self.session.query(self.model)
         for expression in filters:
-            instance = instance.filter(expression)
+            if _is_ordering_expression(expression):
+                instance = instance.order_by(expression)
+            else:
+                instance = instance.filter(expression)
         return instance.count()
 
     def get(self, primary_keys) -> object:
