@@ -122,7 +122,11 @@ def to_filter(instance,
         elif op in ["asc"]:
             alchemy_filters.append(left.asc())
         elif op in ["desc"]:
-            alchemy_filters.append(left.asc())
+            alchemy_filters.append(left.desc())
+
+        # Test comparator
+        elif hasattr(left.comparator, op):
+            alchemy_filters.append(getattr(left.comparator, op)(right))
 
         # Raise Exception
         else:
