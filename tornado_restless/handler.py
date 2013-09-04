@@ -397,7 +397,20 @@ class BaseHandler(RequestHandler):
         """
 
         self.logger.debug(self.request.body)
-        return loads(str(self.request.body, encoding=self.get_content_encoding()))
+
+        content_type = self.request.headers.get('Content-Type')
+        if 'www-form-urlencoded' in content_type:
+            payload = self.request.arguments
+            for key, value in payload.items():
+                if len(value) == 0:
+                    payload[key] = None
+                elif len(value) == 1:
+                    payload[key] = str(value[0], encoding=self.get_content_encoding())
+                else:
+                    payload[key] = [str(value, encoding=self.get_content_encoding()) for value in value]
+            return payload
+        else:
+            return loads(str(self.request.body, encoding=self.get_content_encoding()))
 
     def get_body_argument(self, name: str, default=RequestHandler._ARG_DEFAULT):
         """
