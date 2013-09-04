@@ -22,7 +22,7 @@ __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '27.04.13 - 00:14'
 
 
-def _filter(instance, condition):
+def _filter(instance, condition) -> dict:
     """
         Filter properties of instace based on condition
 
@@ -86,7 +86,7 @@ class ModelWrapper(object):
             return self.model.__tablename__
 
     @staticmethod
-    def get_primary_keys(instance) -> list:
+    def get_primary_keys(instance) -> dict:
         """
             Returns the primary keys
 
@@ -105,7 +105,7 @@ class ModelWrapper(object):
         return self.get_primary_keys(self.model)
 
     @staticmethod
-    def get_unique_keys(instance) -> list:
+    def get_unique_keys(instance) -> dict:
         """
             Returns the primary keys
 
@@ -145,7 +145,7 @@ class ModelWrapper(object):
         return self.get_foreign_keys(self.model)
 
     @staticmethod
-    def get_columns(instance) -> list:
+    def get_columns(instance) -> dict:
         """
             Returns the columns objects of the model
 
@@ -162,7 +162,7 @@ class ModelWrapper(object):
         return self.get_columns(self.model)
 
     @staticmethod
-    def get_attributes(instance) -> list:
+    def get_attributes(instance) -> dict:
         """
             Returns the attributes of the model
 
@@ -179,7 +179,7 @@ class ModelWrapper(object):
         return self.get_attributes(self.model)
 
     @staticmethod
-    def get_relations(instance) -> list:
+    def get_relations(instance) -> dict:
         """
             Returns the relations objects of the model
 
@@ -211,7 +211,7 @@ class ModelWrapper(object):
                     if isinstance(field, hybrid_property)]
 
     @memoized_property
-    def hybrids(self):
+    def hybrids(self) -> list:
         """
         @see get_hybrids
         """

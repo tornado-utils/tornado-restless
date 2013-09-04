@@ -495,10 +495,10 @@ class BaseHandler(RequestHandler):
 
         # Handle Relations extra
         values_relations = {}
-        for relation in self.model.relations:
-            if relation.key in values:
-                values_relations[relation.key] = values[relation.key]
-                del values[relation.key]
+        for relation_key, relation in self.model.relations.items():
+            if relation_key in values:
+                values_relations[relation_key] = values[relation_key]
+                del values[relation_key]
 
         # Check Columns
         #for column in values:
