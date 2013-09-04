@@ -24,31 +24,15 @@ class ApiManager(object):
 
     def __init__(self,
                  application: Application,
-                 session: sqlalchemy.orm.Session=None,
-                 Session: type=None):
+                 session_maker: type=None):
         """
 
-        :param Session: is a sqlalchemy.orm.Session class
-        :param session: is a sqlalchemy.orm.Session object
+        :param session_maker: is a sqlalchemy.orm.Session class factory
         :param application: is the tornado.web.Application object
         """
         self.application = application
 
-        if Session is None and session is None:
-            raise IllegalArgumentError("Either session or Session must be defined")
-
-        self.Session = Session
-        if session is not None:
-            self._session = session
-
-    @memoized_property
-    def session(self):
-        """
-            Create a session object from Session() or use an existing session
-        """
-        if hasattr(self, '_session'):
-            return self._session
-        return self.Session()
+        self.session_maker = session_maker
 
     def create_api_blueprint(self,
                              model,

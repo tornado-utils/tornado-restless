@@ -80,7 +80,7 @@ class BaseHandler(RequestHandler):
 
         super().initialize()
 
-        self.model = SessionedModelWrapper(model, manager.session)
+        self.model = SessionedModelWrapper(model, manager.session_maker())
         self.methods = [method.lower() for method in methods]
         self.allow_patch_many = allow_patch_many
         self.validation_exceptions = validation_exceptions

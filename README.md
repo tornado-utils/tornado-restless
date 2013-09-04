@@ -63,7 +63,7 @@ Quickstart
     metadata.create_all(engine)
 
     # Create restless api handlers
-    api = ApiManager(application=application, session=session)
+    api = ApiManager(application=application, session_maker=Session)
     api.create_api(Person)
 
     if __name__ == "__main__":
