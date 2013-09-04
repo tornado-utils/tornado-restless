@@ -345,34 +345,27 @@ class BaseHandler(RequestHandler):
             raise MethodNotAllowedError(self.request.method)
 
         try:
-            with self.model.session.begin_nested():
-                values = self.get_argument_values()
+            values = self.get_argument_values()
 
-                # Create Instance
-                instance = self.model(**values)
+            # Create Instance
+            instance = self.model(**values)
 
-                # Flush
-                try:
-                    self.model.session.flush()
-                except SQLAlchemyError as ex:
-                    logging.exception(ex)
-                    self.model.session.rollback()
-                    self.send_error(status_code=400, exc_info=sys.exc_info())
-                    return
+            # Flush
+            self.model.session.commit()
 
-                # Refresh
-                self.model.session.refresh(instance)
+            # Refresh
+            self.model.session.refresh(instance)
 
-                # Set Status
-                self.set_status(201, "Created")
+            # Set Status
+            self.set_status(201, "Created")
 
-                # To Dict
-                self.write(self.to_dict(instance,
-                                        include_columns=self.include_columns,
-                                        include_relations=self.include_relations,
-                                        exclude_columns=self.exclude_columns,
-                                        exclude_relations=self.exclude_relations))
-                # Commit
+            # To Dict
+            self.write(self.to_dict(instance,
+                                    include_columns=self.include_columns,
+                                    include_relations=self.include_relations,
+                                    exclude_columns=self.exclude_columns,
+                                    exclude_relations=self.exclude_relations))
+            # Commit
             self.model.session.commit()
         except SQLAlchemyError as ex:
             logging.exception(ex)
