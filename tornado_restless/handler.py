@@ -16,6 +16,7 @@ import sys
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import UnmappedInstanceError
+from sqlalchemy.util import memoized_instancemethod, memoized_property
 from tornado.web import RequestHandler, HTTPError
 
 from .convert import to_dict, to_filter
@@ -392,6 +393,7 @@ class BaseHandler(RequestHandler):
             logging.exception(ex)
             self.send_error(status_code=400, exc_info=sys.exc_info())
 
+    @memoized_instancemethod
     def get_content_encoding(self):
         """
         Get the encoding the client sends us for encoding request.body correctly
@@ -403,17 +405,14 @@ class BaseHandler(RequestHandler):
         else:
             return 'latin1'
 
+    @memoized_instancemethod
     def get_body_arguments(self):
         """
             Get arguments encode as json body
         """
 
-        try:
-            return self._body_arguments
-        except AttributeError:
-            self.logger.info(self.request.body)
-            self._body_arguments = loads(str(self.request.body, encoding=self.get_content_encoding()))
-            return self._body_arguments
+        self.logger.debug(self.request.body)
+        return loads(str(self.request.body, encoding=self.get_content_encoding()))
 
     def get_body_argument(self, name: str, default=RequestHandler._ARG_DEFAULT):
         """
@@ -649,11 +648,9 @@ class BaseHandler(RequestHandler):
             self.logger.info("Possible unkown instance type: %s" % type(instance))
             return instance
 
-    @property
+    @memoized_property
     def logger(self):
         """
             Get the Request Logger
         """
-        if not hasattr(self, "_logger"):
-            self._logger = logging.getLogger('tornado.restless')
-        return self._logger
+        return logging.getLogger('tornado.restless')
