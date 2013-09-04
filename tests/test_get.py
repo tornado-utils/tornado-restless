@@ -27,9 +27,13 @@ class TestGet(TestBase):
         logging.debug(flask_data)
         logging.debug(tornado_data)
 
-        self.subsetOf(flask_data, tornado_data)
+        assert self.subsetOf(flask_data, tornado_data)
 
     def test_likefilter(self):
+        """
+            Test like something
+        """
+
         filters = [dict(name='name', op='like', val='%r%')]
         params = dict(q=json.dumps(dict(filters=filters)))
 
@@ -39,12 +43,16 @@ class TestGet(TestBase):
         logging.debug(flask_data)
         logging.debug(tornado_data)
 
-        self.subsetOf(flask_data, tornado_data)
+        assert self.subsetOf(flask_data, tornado_data)
 
         assert len(flask_data['objects']) == len(tornado_data['objects']) == 2
         assert flask_data['num_results'] == tornado_data['num_results'] == 2
 
     def test_ascsorting(self):
+        """
+            Test sorting (ascending)
+        """
+
         order_by = [dict(field='age', direction='asc')]
         params = dict(q=json.dumps(dict(order_by=order_by)))
 
@@ -54,7 +62,7 @@ class TestGet(TestBase):
         logging.debug(flask_data)
         logging.debug(tornado_data)
 
-        self.subsetOf(flask_data, tornado_data)
+        assert self.subsetOf(flask_data, tornado_data)
 
         flask_ages = [o['age'] for o in flask_data['objects']]
         tornado_ages = [o['age'] for o in tornado_data['objects']]
@@ -64,6 +72,10 @@ class TestGet(TestBase):
         assert int(flask_ages[2]) == int(tornado_ages[2]) == 20
 
     def test_descsorting(self):
+        """
+            Test sorting (desscending)
+        """
+
         order_by = [dict(field='age', direction='desc')]
         params = dict(q=json.dumps(dict(order_by=order_by)))
 
@@ -73,7 +85,7 @@ class TestGet(TestBase):
         logging.debug(flask_data)
         logging.debug(tornado_data)
 
-        self.subsetOf(flask_data, tornado_data)
+        assert self.subsetOf(flask_data, tornado_data)
 
         flask_ages = [o['age'] for o in flask_data['objects']]
         tornado_ages = [o['age'] for o in tornado_data['objects']]
@@ -93,7 +105,27 @@ class TestGet(TestBase):
         logging.debug(flask_data)
         logging.debug(tornado_data)
 
-        self.subsetOf(flask_data, tornado_data)
+        assert self.subsetOf(flask_data, tornado_data)
+
+    def test_float(self):
+        """
+            Test for a float value
+        """
+
+        flask_data = self.curl_flask('/api/computers')
+        tornado_data = self.curl_tornado('/api/computers')
+
+        logging.debug(flask_data)
+        logging.debug(tornado_data)
+
+        assert self.subsetOf(flask_data, tornado_data)
+
+        flask_computer_cpu = flask_data['objects'][0]['cpu']
+        tornado_computer_cpu = tornado_data['objects'][0]['cpu']
+
+        assert flask_computer_cpu == tornado_computer_cpu
+        assert isinstance(tornado_computer_cpu, float)
+
 
     def test_nothing(self):
         """
