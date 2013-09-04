@@ -82,7 +82,6 @@ class TestGet(TestBase):
         assert int(flask_ages[-2]) == int(tornado_ages[-2]) == 14
         assert int(flask_ages[-3]) == int(tornado_ages[-3]) == 20
 
-
     def test_single(self):
         """
             Test for a specific persons per pk

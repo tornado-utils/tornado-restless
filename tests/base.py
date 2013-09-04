@@ -12,7 +12,7 @@ import os
 
 from flask import Flask
 import requests
-from sqlalchemy import create_engine, schema, Column, Integer, String, ForeignKey, DateTime, func, Float
+from sqlalchemy import create_engine, schema, event, Column, Integer, String, ForeignKey, DateTime, func, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import sessionmaker, relationship, scoped_session
@@ -37,7 +37,7 @@ class TestBase(object):
     config = {
         'dns': 'sqlite:///test.lite',
         'encoding': 'utf-8',
-        'tornado': {'port': 4091}
+        'tornado': {'port': 7600}
     }
 
     def setUp(self):
@@ -77,9 +77,13 @@ class TestBase(object):
         self.api = {'tornado': TornadoRestlessManager(application=self.tornado, Session=Session),
                     'flask': FlaskRestlessManager(self.flask, session=Session())}
 
-        for model in self.models.values():
-            self.api['tornado'].create_api(model)
-            self.api['flask'].create_api(model)
+        for model, methods in self.models.values():
+            if methods == "all":
+                self.api['tornado'].create_api(model, methods=TornadoRestlessManager.METHODS_ALL)
+                self.api['flask'].create_api(model, methods=TornadoRestlessManager.METHODS_ALL)
+            else:
+                self.api['tornado'].create_api(model)
+                self.api['flask'].create_api(model)
 
         class TornadoThread(Thread):
 
@@ -101,7 +105,10 @@ class TestBase(object):
         else:
             assert assert_for == r.status_code
         try:
-            return r.json()
+            try:
+                return r.json()
+            except ValueError:
+                return None
         finally:
             r.close()
 
@@ -166,9 +173,17 @@ class TestBase(object):
             _user = Column(ForeignKey(Person._id))
             user = relationship(Person, backref='computers')
 
+        class City(Base):
+            __tablename__ = "cities"
+
+            _plz = Column(String(6), primary_key=True)
+
+            name = Column(String, unique=True)
+
+        Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
 
-        self.models = {'Person': Person, 'Computer': Computer}
+        self.models = {'Person': (Person, "all"), 'Computer': (Computer, "all"), 'City': (City, "read")}
 
         anastacia = Person('Anastacia', 44)
         bernd = Person('Bernd', 48)
