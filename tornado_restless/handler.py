@@ -368,8 +368,8 @@ class BaseHandler(RequestHandler):
             # Commit
             self.model.session.commit()
         except SQLAlchemyError as ex:
-            logging.exception(ex)
             self.send_error(status_code=400, exc_info=sys.exc_info())
+            self.model.session.rollback()
 
     @memoized_instancemethod
     def get_content_encoding(self):
