@@ -402,8 +402,10 @@ class BaseHandler(RequestHandler):
                 else:
                     payload[key] = [str(value, encoding=self.get_content_encoding()) for value in value]
             return payload
-        else:
+        elif 'application/json' in content_type:
             return loads(str(self.request.body, encoding=self.get_content_encoding()))
+        else:
+            raise HTTPError(415, content_type=content_type)
 
     def get_body_argument(self, name: str, default=RequestHandler._ARG_DEFAULT):
         """
