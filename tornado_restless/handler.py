@@ -20,23 +20,8 @@ from sqlalchemy.util import memoized_instancemethod, memoized_property
 from tornado.web import RequestHandler, HTTPError
 
 from .convert import to_dict, to_filter
-from .errors import IllegalArgumentError
+from .errors import IllegalArgumentError, MethodNotAllowedError
 from .wrapper import SessionedModelWrapper
-
-try:
-    from tornado.web import MethodNotAllowedError
-except ImportError:
-    class MethodNotAllowedError(HTTPError):
-        """An exception occuring when the method is not supported by the handler
-
-        Takes in addition to `HTTPError` arguments method and stores it value
-
-        :arg string method: The name of the method that was called
-        """
-
-        def __init__(self, method=None, status_code=405, log_message=None, *args, **kwargs):
-            super().__init__(status_code, log_message, *args, **kwargs)
-            self.method = method
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '26.04.13 - 22:09'
