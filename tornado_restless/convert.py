@@ -33,7 +33,7 @@ def to_filter(instance,
     for argument_order in argument_orders:
         direction = argument_order['direction']
         if direction not in ["asc", "desc"]:
-            raise IllegalArgumentError("Direction unkown")
+            raise IllegalArgumentError("Direction unknown")
         argument_filters.append({'name': argument_order['field'], 'op': direction})
 
     # Create Alchemy Filters

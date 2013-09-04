@@ -16,26 +16,12 @@ import sys
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import UnmappedInstanceError
+from sqlalchemy.util import memoized_instancemethod, memoized_property
 from tornado.web import RequestHandler, HTTPError
 
 from .convert import to_dict, to_filter
-from .errors import IllegalArgumentError
+from .errors import IllegalArgumentError, MethodNotAllowedError
 from .wrapper import SessionedModelWrapper
-
-try:
-    from tornado.web import MethodNotAllowedError
-except ImportError:
-    class MethodNotAllowedError(HTTPError):
-        """An exception occuring when the method is not supported by the handler
-
-        Takes in addition to `HTTPError` arguments method and stores it value
-
-        :arg string method: The name of the method that was called
-        """
-
-        def __init__(self, method=None, status_code=405, log_message=None, *args, **kwargs):
-            super().__init__(status_code, log_message, *args, **kwargs)
-            self.method = method
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '26.04.13 - 22:09'
@@ -359,39 +345,33 @@ class BaseHandler(RequestHandler):
             raise MethodNotAllowedError(self.request.method)
 
         try:
-            with self.model.session.begin_nested():
-                values = self.get_argument_values()
+            values = self.get_argument_values()
 
-                # Create Instance
-                instance = self.model(**values)
+            # Create Instance
+            instance = self.model(**values)
 
-                # Flush
-                try:
-                    self.model.session.flush()
-                except SQLAlchemyError as ex:
-                    logging.exception(ex)
-                    self.model.session.rollback()
-                    self.send_error(status_code=400, exc_info=sys.exc_info())
-                    return
+            # Flush
+            self.model.session.commit()
 
-                # Refresh
-                self.model.session.refresh(instance)
+            # Refresh
+            self.model.session.refresh(instance)
 
-                # Set Status
-                self.set_status(201, "Created")
+            # Set Status
+            self.set_status(201, "Created")
 
-                # To Dict
-                self.write(self.to_dict(instance,
-                                        include_columns=self.include_columns,
-                                        include_relations=self.include_relations,
-                                        exclude_columns=self.exclude_columns,
-                                        exclude_relations=self.exclude_relations))
-                # Commit
+            # To Dict
+            self.write(self.to_dict(instance,
+                                    include_columns=self.include_columns,
+                                    include_relations=self.include_relations,
+                                    exclude_columns=self.exclude_columns,
+                                    exclude_relations=self.exclude_relations))
+            # Commit
             self.model.session.commit()
         except SQLAlchemyError as ex:
             logging.exception(ex)
             self.send_error(status_code=400, exc_info=sys.exc_info())
 
+    @memoized_instancemethod
     def get_content_encoding(self):
         """
         Get the encoding the client sends us for encoding request.body correctly
@@ -403,17 +383,29 @@ class BaseHandler(RequestHandler):
         else:
             return 'latin1'
 
+    @memoized_instancemethod
     def get_body_arguments(self):
         """
             Get arguments encode as json body
         """
 
-        try:
-            return self._body_arguments
-        except AttributeError:
-            self.logger.info(self.request.body)
-            self._body_arguments = loads(str(self.request.body, encoding=self.get_content_encoding()))
-            return self._body_arguments
+        self.logger.debug(self.request.body)
+
+        content_type = self.request.headers.get('Content-Type')
+        if 'www-form-urlencoded' in content_type:
+            payload = self.request.arguments
+            for key, value in payload.items():
+                if len(value) == 0:
+                    payload[key] = None
+                elif len(value) == 1:
+                    payload[key] = str(value[0], encoding=self.get_content_encoding())
+                else:
+                    payload[key] = [str(value, encoding=self.get_content_encoding()) for value in value]
+            return payload
+        elif 'application/json' in content_type:
+            return loads(str(self.request.body, encoding=self.get_content_encoding()))
+        else:
+            raise HTTPError(415, content_type=content_type)
 
     def get_body_argument(self, name: str, default=RequestHandler._ARG_DEFAULT):
         """
@@ -505,10 +497,10 @@ class BaseHandler(RequestHandler):
 
         # Handle Relations extra
         values_relations = {}
-        for relation in self.model.relations:
-            if relation.key in values:
-                values_relations[relation.key] = values[relation.key]
-                del values[relation.key]
+        for relation_key, relation in self.model.relations.items():
+            if relation_key in values:
+                values_relations[relation_key] = values[relation_key]
+                del values[relation_key]
 
         # Check Columns
         #for column in values:
@@ -649,11 +641,9 @@ class BaseHandler(RequestHandler):
             self.logger.info("Possible unkown instance type: %s" % type(instance))
             return instance
 
-    @property
+    @memoized_property
     def logger(self):
         """
             Get the Request Logger
         """
-        if not hasattr(self, "_logger"):
-            self._logger = logging.getLogger('tornado.restless')
-        return self._logger
+        return logging.getLogger('tornado.restless')
