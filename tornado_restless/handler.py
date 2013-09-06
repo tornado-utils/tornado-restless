@@ -190,10 +190,11 @@ class BaseHandler(RequestHandler):
 
         # Modify Instances
         if self.get_query_argument("single", False):
-            instance = self.model.one(filters=filters)
-            for (key, value) in values.items():
-                logging.debug("%s => %s" % (key, value))
-                setattr(instance, key, value)
+            instances = [self.model.one(filters=filters)]
+            for instance in instances:
+                for (key, value) in values.items():
+                    logging.debug("%s => %s" % (key, value))
+                    setattr(instance, key, value)
             num = 1
         else:
             num = self.model.update(values, limit=limit, filters=filters)
@@ -202,8 +203,8 @@ class BaseHandler(RequestHandler):
         self.model.session.commit()
 
         # Result
-        self.set_status(200, "Removed")
-        self.write({'num_removed': num})
+        self.set_status(201, "Patched")
+        self.write({'num_modified': num})
 
     def patch_single(self, pks: str):
         """
@@ -508,41 +509,6 @@ class BaseHandler(RequestHandler):
         #        raise IllegalArgumentError("Column '%s' not defined for model %s" % (column, self.model.model))
 
         return values
-
-    def patch_many(self):
-        """
-            Patch many instances
-        """
-
-        # Flush
-        self.model.session.flush()
-
-        # Get values
-        values = self.get_argument_values()
-
-        # Filters
-        filters = self.get_filters()
-
-        # Limit
-        limit = self.get_query_argument("limit", None)
-
-        # Modify Instances
-        if self.get_query_argument("single", False):
-            instances = [self.model.one(filters=filters)]
-            for instance in instances:
-                for (key, value) in values.items():
-                    logging.debug("%s => %s" % (key, value))
-                    setattr(instance, key, value)
-            num = 1
-        else:
-            num = self.model.update(values, limit=limit, filters=filters)
-
-        # Commit
-        self.model.session.commit()
-
-        # Result
-        self.set_status(201, "Patched")
-        self.write({'num_modified': num})
 
     def get(self, pks=None):
         """

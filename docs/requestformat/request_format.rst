@@ -1,12 +1,12 @@
 .. module:: requestformat
 .. _request_format: http://flask-restless.readthedocs.org/en/latest/requestformat.html#format-of-requests-and-responses
 
-:mod:`requestformat.request_format` -- Format of requests and responses
+:mod:`request_format` -- Format of requests and responses
 -----------------------------------------------------------------------
 
 Responses are all in JSON format set with mimetype 'application/json'.
 For requests that require a body (:http:method:`post`/:http:method:`post`/:http:method:`post`) ensure that you set a correctly Content-Type,
- otherwise the server will responds with a :http:statuscode:`415`.
+otherwise the server will responds with a :http:statuscode:`415`.
 Tornado Restless supports in addition to ``Content-Type: application/json`` the ``Content-Type: application/x-www-url-encodeded`` format.
 
 .. note::

@@ -1,7 +1,7 @@
 .. module:: searchformat
 .. _query_format: http://flask-restless.readthedocs.org/en/latest/searchformat.html#query-format
 
-:mod:`searchformat.query_format` -- Query Format
+:mod:`query_format` -- Query Format
 ------------------------------------------------
 
 The Query format is the same as in Flask Restless, see query_format_.
