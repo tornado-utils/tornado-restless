@@ -20,6 +20,9 @@ User's guide
 API
 ---
 
+.. toctree::
+   :maxdepth: 1
+
    api
 
 Additional information
@@ -30,4 +33,3 @@ Additional information
 
    limitations
    license
-   changelog

@@ -30,6 +30,16 @@ __date__ = '26.04.13 - 22:09'
 class BaseHandler(RequestHandler):
     """
         Basic Blueprint for a sqlalchemy model
+
+        Subclass of :class:`tornado.web.RequestHandler` that handles web requests.
+
+        Overwrite :func:`get() <get>` / :func:`post() <post>` / :func:`put() <put>` / :func:`patch() <patch>` / :func:`delete() <delete>`
+        if you want complete customize handling of the methods. Note that the default implementation of this function
+        check for the allowness and then call depending on the pks parameter the associated _single / _many method.
+
+        If you just want to customize the handling of the methods overwrite method_single or method_many.
+
+        If you want completly disable a method overwrite the SUPPORTED_METHODS constant
     """
 
     SUPPORTED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
@@ -155,11 +165,12 @@ class BaseHandler(RequestHandler):
         else:
             super().write_error(status_code, **kwargs)
 
-    def patch(self, pks=None):
+    def patch(self, pks: str=None):
         """
             PATCH (update instance) request
 
-            :param pks: query argument of request (list of primary keys, comma seperated)
+            :param pks: query argument of request
+            :type pks: comma seperated string list
         """
 
         if not 'patch' in self.methods:
@@ -171,7 +182,7 @@ class BaseHandler(RequestHandler):
             else:
                 self.send_error(403)
         else:
-            self.patch_single(pks)
+            self.patch_single(pks.split(","))
 
     def patch_many(self):
         """
@@ -208,18 +219,19 @@ class BaseHandler(RequestHandler):
         self.set_status(201, "Patched")
         self.write({'num_modified': num})
 
-    def patch_single(self, pks: str):
+    def patch_single(self, primary_keys: list):
         """
             Patch one instance with primary_keys pks
 
-            :param pks: query argument of request (list of primary keys, comma seperated)
+            :param primary_keys: query argument of request
+            :type primary_keys: list of primary keys
         """
         try:
             with self.model.session.begin_nested():
                 values = self.get_argument_values()
 
                 # Get Instance
-                instance = self.model.get(pks.split(","))
+                instance = self.model.get(primary_keys)
 
                 # Set Values
                 for (key, value) in values.items():
@@ -254,11 +266,12 @@ class BaseHandler(RequestHandler):
             logging.exception(ex)
             self.send_error(status_code=400, exc_info=sys.exc_info())
 
-    def delete(self, pks=None):
+    def delete(self, pks: str=None):
         """
             DELETE (delete instance) request
 
-            :param pks: query argument of request (list of primary keys, comma seperated)
+            :param pks: query argument of request
+            :type pks: comma seperated string list
         """
 
         if not 'delete' in self.methods:
@@ -270,7 +283,7 @@ class BaseHandler(RequestHandler):
             else:
                 self.send_error(403)
         else:
-            self.delete_single(pks)
+            self.delete_single(pks.split(","))
 
     def delete_many(self):
         """
@@ -302,15 +315,16 @@ class BaseHandler(RequestHandler):
         self.set_status(200, "Removed")
         self.write({'num_removed': num})
 
-    def delete_single(self, pks):
+    def delete_single(self, primary_keys: list):
         """
             Get one instance with primary_keys pks
 
-            :param pks: query argument of request (list of primary keys, comma seperated)
+            :param primary_keys: query argument of request
+            :type primary_keys: list of primary keys
         """
 
         # Get Instance
-        instance = self.model.get(pks.split(","))
+        instance = self.model.get(primary_keys)
 
         # Trigger deletion
         self.model.session.delete(instance)
@@ -319,11 +333,12 @@ class BaseHandler(RequestHandler):
         # Status
         self.set_status(204, "Instance removed")
 
-    def put(self, pks=None):
+    def put(self, pks: str=None):
         """
             PUT (update instance) request
 
-            :param pks: query argument of request (list of primary keys, comma seperated)
+            :param pks: query argument of request
+            :type pks: comma seperated string list
         """
 
         if not 'put' in self.methods:
@@ -335,7 +350,7 @@ class BaseHandler(RequestHandler):
             else:
                 self.send_error(403)
         else:
-            self.patch_single(pks)
+            self.patch_single(pks.split(","))
 
     def post(self, pks: str=None):
         """
@@ -512,11 +527,12 @@ class BaseHandler(RequestHandler):
 
         return values
 
-    def get(self, pks=None):
+    def get(self, pks: str=None):
         """
             GET request
 
-            :param pks: query argument of request (list of primary keys, comma seperated)
+            :param pks: query argument of request
+            :type pks: comma seperated string list
         """
 
         if not 'get' in self.methods:
@@ -525,17 +541,18 @@ class BaseHandler(RequestHandler):
         if pks is None:
             self.get_many()
         else:
-            self.get_single(pks)
+            self.get_single(pks.split(","))
 
-    def get_single(self, pks: str):
+    def get_single(self, primary_keys: list):
         """
             Get one instance with primary_keys pks
 
-            :param pks: query argument of request (list of primary keys, comma seperated)
+            :param primary_keys: query argument of request
+            :type primary_keys: list of primary keys
         """
 
         # Get Instance
-        instance = self.model.get(pks.split(","))
+        instance = self.model.get(primary_keys)
 
         # To Dict
         self.write(self.to_dict(instance,

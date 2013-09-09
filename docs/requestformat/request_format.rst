@@ -5,9 +5,11 @@
 -----------------------------------------------------------------------
 
 Responses are all in JSON format set with mimetype 'application/json'.
-For requests that require a body (:http:method:`post`/:http:method:`post`/:http:method:`post`) ensure that you set a correctly Content-Type,
+For requests that require a body (:http:method:`post`/:http:method:`put`/:http:method:`patch`) ensure that you set a correctly Content-Type,
 otherwise the server will responds with a :http:statuscode:`415`.
-Tornado Restless supports in addition to ``Content-Type: application/json`` the ``Content-Type: application/x-www-url-encodeded`` format.
+
+.. note::
+ Tornado Restless supports in addition to ``Content-Type: application/json`` the ``Content-Type: application/x-www-url-encodeded`` format.
 
 .. note::
  The x-www-url-encodeded format should be fine for basics, but due the lack of type information,
