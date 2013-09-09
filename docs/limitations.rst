@@ -24,3 +24,4 @@ Minor differences:
 * More operators are supported
 * There are two differences :http:statuscode:`404` Bad Arguments exceptions either from the restless engine or the sqlalchemy engine
 * Data modification may be passed via ``Content-Type: application/x-www-url-encodeded``
+* The method_single processors accepts a list of primary_keys as arguments in difference to flask-restless where only one primary key is allowed.

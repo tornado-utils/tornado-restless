@@ -35,7 +35,7 @@ class BaseHandler(RequestHandler):
 
         Overwrite :func:`get() <get>` / :func:`post() <post>` / :func:`put() <put>` / :func:`patch() <patch>` / :func:`delete() <delete>`
         if you want complete customize handling of the methods. Note that the default implementation of this function
-        check for the allowness and then call depending on the pks parameter the associated _single / _many method.
+        check for the allowness and then call depending on the instance_id parameter the associated _single / _many method.
 
         If you just want to customize the handling of the methods overwrite method_single or method_many.
 
@@ -70,6 +70,8 @@ class BaseHandler(RequestHandler):
         :param exclude_columns: Blacklist of columns to be excluded
         :param results_per_page: The default value of how many results are returned per request
         :param max_results_per_page: The hard upper limit of resutest per page
+
+        :reqheader X-HTTP-Method-Override: If allow_method_override is True, this header overwrites the request method
         """
 
         # Override Method if Header provided
@@ -89,7 +91,7 @@ class BaseHandler(RequestHandler):
         self.include_columns, self.include_relations = self.parse_columns(include_columns)
         self.exclude_columns, self.exclude_relations = self.parse_columns(exclude_columns)
 
-    def parse_columns(self, strings: list):
+    def parse_columns(self, strings: list) -> "(list, list)":
         """
             Parse a list of column names (name1, name2, relation.name1, ...)
 
@@ -125,6 +127,9 @@ class BaseHandler(RequestHandler):
     def get_filters(self):
         """
             Returns a list of filters made by the query argument
+
+            :query filters: list of filters
+            :query order_by: list of orderings
         """
 
         # Get all provided filters
@@ -150,10 +155,10 @@ class BaseHandler(RequestHandler):
         if 'exc_info' in kwargs:
             exc_type, exc_value = kwargs['exc_info'][:2]
             print_exception(*kwargs['exc_info'])
-            if issubclass(exc_type, HTTPError) and exc_value.reason:
-                self.set_status(status_code, reason=exc_value.reason)
+            if issubclass(exc_type, UnmappedInstanceError):
+                self.set_status(400, reason='SQLAlchemy: Unmapped Instance')
                 self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
-                                 message="%s" % exc_value, **exc_value.__dict__))
+                                 message="%s" % exc_value))
             elif issubclass(exc_type, SQLAlchemyError):
                 self.set_status(400, reason='SQLAlchemy: Bad Request')
                 self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
@@ -162,31 +167,45 @@ class BaseHandler(RequestHandler):
                 self.set_status(400, reason='Restless: Bad Arguments')
                 self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
                                  message="%s" % exc_value))
+            elif issubclass(exc_type, HTTPError) and exc_value.reason:
+                self.set_status(status_code, reason=exc_value.reason)
+                self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
+                                 message="%s" % exc_value, **exc_value.__dict__))
+            else:
+                super().write_error(status_code, **kwargs)
         else:
             super().write_error(status_code, **kwargs)
 
-    def patch(self, pks: str=None):
+    def patch(self, instance_id: str=None):
         """
             PATCH (update instance) request
 
-            :param pks: query argument of request
-            :type pks: comma seperated string list
+            :param instance_id: query argument of request
+            :type instance_id: comma seperated string list
+
+            :statuscode 403: PATCH MANY disallowed
+            :statuscode 405: PATCH disallowed
         """
 
         if not 'patch' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
-        if pks is None:
+        if instance_id is None:
             if self.allow_patch_many:
                 self.patch_many()
             else:
                 self.send_error(403)
         else:
-            self.patch_single(pks.split(","))
+            self.patch_single(instance_id.split(","))
 
     def patch_many(self):
         """
             Patch many instances
+
+            :statuscode 201: instances successfull modified
+
+            :query limit: limit the count of modified instances
+            :query single: If true sqlalchemy will raise an error if zero or more than one instances would be modified
         """
 
         # Flush
@@ -219,19 +238,22 @@ class BaseHandler(RequestHandler):
         self.set_status(201, "Patched")
         self.write({'num_modified': num})
 
-    def patch_single(self, primary_keys: list):
+    def patch_single(self, instance_id: list):
         """
-            Patch one instance with primary_keys pks
+            Patch one instance
 
-            :param primary_keys: query argument of request
-            :type primary_keys: list of primary keys
+            :param instance_id: query argument of request
+            :type instance_id: list of primary keys
+
+            :statuscode 201: instance successfull modified
+            :statuscode 404: Error
         """
         try:
             with self.model.session.begin_nested():
                 values = self.get_argument_values()
 
                 # Get Instance
-                instance = self.model.get(primary_keys)
+                instance = self.model.get(instance_id)
 
                 # Set Values
                 for (key, value) in values.items():
@@ -254,11 +276,11 @@ class BaseHandler(RequestHandler):
                 self.set_status(201, "Patched")
 
                 # To Dict
-                self.write(self.to_dict(instance,
-                                        include_columns=self.include_columns,
-                                        include_relations=self.include_relations,
-                                        exclude_columns=self.exclude_columns,
-                                        exclude_relations=self.exclude_relations))
+                self.write(to_dict(instance,
+                                   include_columns=self.include_columns,
+                                   include_relations=self.include_relations,
+                                   exclude_columns=self.exclude_columns,
+                                   exclude_relations=self.exclude_relations))
 
             # Commit
             self.model.session.commit()
@@ -266,28 +288,36 @@ class BaseHandler(RequestHandler):
             logging.exception(ex)
             self.send_error(status_code=400, exc_info=sys.exc_info())
 
-    def delete(self, pks: str=None):
+    def delete(self, instance_id: str=None):
         """
             DELETE (delete instance) request
 
-            :param pks: query argument of request
-            :type pks: comma seperated string list
+            :param instance_id: query argument of request
+            :type instance_id: comma seperated string list
+
+            :statuscode 403: DELETE MANY disallowed
+            :statuscode 405: DELETE disallowed
         """
 
         if not 'delete' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
-        if pks is None:
+        if instance_id is None:
             if self.allow_patch_many:
                 self.delete_many()
             else:
                 self.send_error(403)
         else:
-            self.delete_single(pks.split(","))
+            self.delete_single(instance_id.split(","))
 
     def delete_many(self):
         """
             Remove many instances
+
+            :statuscode 200: instances successfull removed
+
+            :query limit: limit the count of deleted instances
+            :query single: If true sqlalchemy will raise an error if zero or more than one instances would be deleted
         """
 
         # Flush
@@ -315,16 +345,18 @@ class BaseHandler(RequestHandler):
         self.set_status(200, "Removed")
         self.write({'num_removed': num})
 
-    def delete_single(self, primary_keys: list):
+    def delete_single(self, instance_id: list):
         """
-            Get one instance with primary_keys pks
+            Get one instance
 
-            :param primary_keys: query argument of request
-            :type primary_keys: list of primary keys
+            :param instance_id: query argument of request
+            :type instance_id: list of primary keys
+
+            :statuscode 204: instance successfull removed
         """
 
         # Get Instance
-        instance = self.model.get(primary_keys)
+        instance = self.model.get(instance_id)
 
         # Trigger deletion
         self.model.session.delete(instance)
@@ -333,30 +365,41 @@ class BaseHandler(RequestHandler):
         # Status
         self.set_status(204, "Instance removed")
 
-    def put(self, pks: str=None):
+    def put(self, instance_id: str=None):
         """
             PUT (update instance) request
 
-            :param pks: query argument of request
-            :type pks: comma seperated string list
+            :param instance_id: query argument of request
+            :type instance_id: comma seperated string list
+
+            :statuscode 403: PUT MANY disallowed
+            :statuscode 404: Error
+            :statuscode 405: PUT disallowed
         """
 
         if not 'put' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
-        if pks is None:
+        if instance_id is None:
             if self.allow_patch_many:
-                self.patch_many()
+                self.put_many()
             else:
                 self.send_error(403)
         else:
-            self.patch_single(pks.split(","))
+            self.put_single(instance_id.split(","))
 
-    def post(self, pks: str=None):
+    put_many = patch_many
+    put_single = patch_single
+
+    def post(self, instance_id: str=None):
         """
             POST (new input) request
 
-            :param pks: (ignored)
+            :param instance_id: (ignored)
+
+            :statuscode 204: instance successfull created
+            :statuscode 404: Error
+            :statuscode 405: POST disallowed
         """
 
         if not 'post' in self.methods:
@@ -378,11 +421,11 @@ class BaseHandler(RequestHandler):
             self.set_status(201, "Created")
 
             # To Dict
-            self.write(self.to_dict(instance,
-                                    include_columns=self.include_columns,
-                                    include_relations=self.include_relations,
-                                    exclude_columns=self.exclude_columns,
-                                    exclude_relations=self.exclude_relations))
+            self.write(to_dict(instance,
+                               include_columns=self.include_columns,
+                               include_relations=self.include_relations,
+                               exclude_columns=self.exclude_columns,
+                               exclude_relations=self.exclude_relations))
             # Commit
             self.model.session.commit()
         except SQLAlchemyError as ex:
@@ -390,9 +433,11 @@ class BaseHandler(RequestHandler):
             self.model.session.rollback()
 
     @memoized_instancemethod
-    def get_content_encoding(self):
+    def get_content_encoding(self) -> str:
         """
         Get the encoding the client sends us for encoding request.body correctly
+
+        :reqheader Content-Type: Provide a charset in addition for decoding arguments.
         """
 
         content_type_args = {k.strip(): v for k, v in parse_qs(self.request.headers['Content-Type']).items()}
@@ -402,9 +447,13 @@ class BaseHandler(RequestHandler):
             return 'latin1'
 
     @memoized_instancemethod
-    def get_body_arguments(self):
+    def get_body_arguments(self) -> dict:
         """
             Get arguments encode as json body
+
+            :statuscode 415: Content-Type mismatch
+
+            :reqheader Content-Type: application/x-www-form-urlencoded or application/json
         """
 
         self.logger.debug(self.request.body)
@@ -429,10 +478,11 @@ class BaseHandler(RequestHandler):
         """
         Get an argument named key from json encoded body
 
-        :param name:
-        :param default:
+        :param name: Name of argument
+        :param default: Default value, if not provided HTTPError 404 is raised
         :return:
-        :raise: 400 Missing Argument
+
+        :statuscode 404: Missing Argument
         """
         arguments = self.get_body_arguments()
         if name in arguments:
@@ -450,6 +500,8 @@ class BaseHandler(RequestHandler):
         :param default:
         :return:
         :raise: 400 Missing Argument
+
+        :query q: The query argument
         """
 
         try:
@@ -483,6 +535,8 @@ class BaseHandler(RequestHandler):
     def get_argument_values(self):
         """
             Get all values provided via arguments
+
+            :query q: (ignored)
         """
 
         # Include Columns
@@ -527,43 +581,56 @@ class BaseHandler(RequestHandler):
 
         return values
 
-    def get(self, pks: str=None):
+    def get(self, instance_id: str=None):
         """
             GET request
 
-            :param pks: query argument of request
-            :type pks: comma seperated string list
+            :param instance_id: query argument of request
+            :type instance_id: comma seperated string list
+
+            :statuscode 405: GET disallowed
         """
 
         if not 'get' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
-        if pks is None:
+        if instance_id is None:
             self.get_many()
         else:
-            self.get_single(pks.split(","))
+            self.get_single(instance_id.split(","))
 
-    def get_single(self, primary_keys: list):
+    def get_single(self, instance_id: list):
         """
-            Get one instance with primary_keys pks
+            Get one instance
 
-            :param primary_keys: query argument of request
-            :type primary_keys: list of primary keys
+            :param instance_id: query argument of request
+            :type instance_id: list of primary keys
         """
 
         # Get Instance
-        instance = self.model.get(primary_keys)
+        instance = self.model.get(instance_id)
 
         # To Dict
-        self.write(self.to_dict(instance,
-                                include_columns=self.include_columns,
-                                include_relations=self.include_relations,
-                                exclude_columns=self.exclude_columns,
-                                exclude_relations=self.exclude_relations))
+        self.write(to_dict(instance,
+                           include_columns=self.include_columns,
+                           include_relations=self.include_relations,
+                           exclude_columns=self.exclude_columns,
+                           exclude_relations=self.exclude_relations))
 
     def get_many(self):
         """
             Get all instances
+
+            Note that it is possible to provide offset and page as argument then
+            it will return instances of the nth page and skip offset items
+
+            :statuscode 400: if results_per_page > max_results_per_page or offset < 0
+
+            :query results_per_page: Overwrite the returned results_per_page
+            :query offset: Skip offset instances
+            :query page: Return nth page
+            :query limit: limit the count of modified instances
+            :query single: If true sqlalchemy will raise an error if zero or more than one instances would be deleted
         """
 
         # Results per Page
@@ -597,38 +664,13 @@ class BaseHandler(RequestHandler):
         self.write({'num_results': num_results,
                     "total_pages": total_pages,
                     "page": page + 1,
-                    "objects": self.to_dict(instances,
-                                            include_columns=self.include_columns,
-                                            include_relations=self.include_relations)})
-
-    def to_dict(self, instance,
-                include_columns=None,
-                include_relations=None,
-                exclude_columns=None,
-                exclude_relations=None):
-        """
-            Translates sqlalchemy instance to dictionary
-
-            Inspired by flask-restless.helpers.to_dict
-
-            :param instance:
-            :param include_columns: Columns that should be included for an instance
-            :param include_relations: Relations that should be include for an instance
-            :param exclude_columns: Columns that should not be included for an instance
-            :param exclude_relations: Relations that should not be include for an instance
-        """
-        try:
-            return to_dict(instance=instance,
-                           include_columns=include_columns, include_relations=include_relations,
-                           exclude_columns=exclude_columns, exclude_relations=exclude_relations)
-        except UnmappedInstanceError as ex:
-            self.logger.error(ex)
-            self.logger.info("Possible unkown instance type: %s" % type(instance))
-            return instance
+                    "objects": to_dict(instances,
+                                       include_columns=self.include_columns,
+                                       include_relations=self.include_relations)})
 
     @memoized_property
     def logger(self):
         """
-            Get the Request Logger
+            Tornado Restless Logger
         """
         return logging.getLogger('tornado.restless')

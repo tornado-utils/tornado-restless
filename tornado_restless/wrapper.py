@@ -355,16 +355,16 @@ class SessionedModelWrapper(ModelWrapper):
                 instance = instance.filter(expression)
         return instance.count()
 
-    def get(self, primary_keys) -> object:
+    def get(self, instance_id: list) -> object:
         """
             Gets one instance of the model based on primary_keys
 
-            :param primary_keys: values of primary_keys
+            :param instance_id: list of primary_keys
         """
-        if len(primary_keys) == 1:
-            primary_keys = primary_keys[0]
+        if len(instance_id) == 1:
+            primary_keys = instance_id[0]
         else:
-            primary_keys = tuple(primary_keys)
+            primary_keys = tuple(instance_id)
         instance = self.session.query(self.model).get(primary_keys)
         if not instance:
             raise NoResultFound("No row was found for get()")

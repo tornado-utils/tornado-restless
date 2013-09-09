@@ -7,7 +7,7 @@ from datetime import datetime, date, time
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
 
-from .errors import IllegalArgumentError
+from .errors import IllegalArgumentError, DictConvertionError
 from .wrapper import ModelWrapper
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
@@ -253,5 +253,5 @@ def to_dict(instance,
                 rtn[column] = None
 
         return rtn
-    except UnmappedInstanceError as ex:
-        raise ex
+    except UnmappedInstanceError:
+        raise DictConvertionError("Could not convert argument to plain dict")

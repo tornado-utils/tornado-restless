@@ -74,7 +74,7 @@ class TestBase(object):
         """
         Session = self.alchemy['Session']
 
-        self.api = {'tornado': TornadoRestlessManager(application=self.tornado, Session=Session),
+        self.api = {'tornado': TornadoRestlessManager(application=self.tornado, session_maker=Session),
                     'flask': FlaskRestlessManager(self.flask, session=Session())}
 
         for model, methods in self.models.values():
