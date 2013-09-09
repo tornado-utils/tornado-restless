@@ -1,6 +1,7 @@
 .. module:: searchformat
+.. _query_format: http://flask-restless.readthedocs.org/en/latest/searchformat.html#operators
 
-:mod:`searchformat.operators` -- Operators
+:mod:`operators` -- Operators
 ------------------------------------------
 
 The operators strings recognized by the API include all the operators from Flask Restless
