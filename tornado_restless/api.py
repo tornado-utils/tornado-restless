@@ -42,6 +42,8 @@ class ApiManager(object):
     def create_api_blueprint(self,
                              model,
                              methods: set=METHODS_READ,
+                             preprocessor: dict=None,
+                             postprocessor: dict=None,
                              url_prefix: str='/api',
                              collection_name: str=None,
                              allow_patch_many: bool=False,
@@ -68,6 +70,8 @@ class ApiManager(object):
         :param results_per_page: The default value of how many results are returned per request
         :param max_results_per_page: The hard upper limit of resutest per page
         :param blueprint_prefix: The Prefix that will be used to unique collection_name for named_handlers
+        :param preprocessor: A dictionary of list of preprocessors that get called
+        :param postprocessor: A dictionary of list of postprocessor that get called
         :param handler_class: The Handler Class that will be used in the route
         :type handler_class: tornado_restless.handler.BaseHandler or a subclass
         :return: :class:`tornado.web.URLSpec`
@@ -81,6 +85,8 @@ class ApiManager(object):
         kwargs = {'model': model,
                   'manager': self,
                   'methods': methods,
+                  'preprocessor': preprocessor or {},
+                  'postprocessor': postprocessor or {},
                   'allow_patch_many': allow_patch_many,
                   'allow_method_override': allow_method_override,
                   'validation_exceptions': validation_exceptions,

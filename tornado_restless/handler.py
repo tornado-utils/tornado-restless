@@ -7,6 +7,7 @@
      use the modification via create_api_blueprint(handler_class=...)
 """
 from collections import defaultdict
+import inspect
 from json import loads
 import logging
 from math import ceil
@@ -33,9 +34,10 @@ class BaseHandler(RequestHandler):
 
         Subclass of :class:`tornado.web.RequestHandler` that handles web requests.
 
-        Overwrite :func:`get() <get>` / :func:`post() <post>` / :func:`put() <put>` / :func:`patch() <patch>` / :func:`delete() <delete>`
-        if you want complete customize handling of the methods. Note that the default implementation of this function
-        check for the allowness and then call depending on the instance_id parameter the associated _single / _many method.
+        Overwrite :func:`get() <get>` / :func:`post() <post>` / :func:`put() <put>` /
+        :func:`patch() <patch>` / :func:`delete() <delete>` if you want complete customize handling of the methods.
+        Note that the default implementation of this function check for the allowness and then call depending on
+        the instance_id parameter the associated _single / _many method, so you probably want to call super()
 
         If you just want to customize the handling of the methods overwrite method_single or method_many.
 
@@ -49,6 +51,8 @@ class BaseHandler(RequestHandler):
                    model,
                    manager,
                    methods: set,
+                   preprocessor: dict,
+                   postprocessor: dict,
                    allow_patch_many: bool,
                    allow_method_override: bool,
                    validation_exceptions,
@@ -63,6 +67,8 @@ class BaseHandler(RequestHandler):
         :param model: The sqlalchemy model
         :param manager: The tornado_restless Api Manager
         :param methods: Allowed methods for this model
+        :param preprocessor: A dictionary of preprocessor functions
+        :param postprocessor: A dictionary of postprocessor functions
         :param allow_patch_many: Allow PATCH with multiple datasets
         :param allow_method_override: Support X-HTTP-Method-Override Header
         :param validation_exceptions:
@@ -85,11 +91,26 @@ class BaseHandler(RequestHandler):
         self.allow_patch_many = allow_patch_many
         self.validation_exceptions = validation_exceptions
 
+        self.preprocessor = preprocessor
+        self.postprocessor = postprocessor
+
         self.results_per_page = results_per_page
         self.max_results_per_page = max_results_per_page
 
         self.include_columns, self.include_relations = self.parse_columns(include_columns)
         self.exclude_columns, self.exclude_relations = self.parse_columns(exclude_columns)
+
+    def prepare(self):
+        """
+            Prepare the request
+        """
+        self._call_preprocessor()
+
+    def on_finish(self):
+        """
+            Finish the request
+        """
+        self._call_postprocessor()
 
     def parse_columns(self, strings: list) -> "(list, list)":
         """
@@ -190,15 +211,20 @@ class BaseHandler(RequestHandler):
         if not 'patch' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
+        self._call_preprocessor(instance_id=instance_id)
+
         if instance_id is None:
             if self.allow_patch_many:
-                self.patch_many()
+                result = self.patch_many()
             else:
-                self.send_error(403)
+                raise MethodNotAllowedError(self.request.method, status_code=403)
         else:
-            self.patch_single(instance_id.split(","))
+            result = self.patch_single(instance_id.split(","))
 
-    def patch_many(self):
+        self._call_postprocessor(result=result)
+        self.finish(result)
+
+    def patch_many(self) -> dict:
         """
             Patch many instances
 
@@ -220,6 +246,9 @@ class BaseHandler(RequestHandler):
         # Limit
         limit = self.get_query_argument("limit", None)
 
+        # Call Preprocessor
+        self._call_preprocessor(filters=filters, data=values)
+
         # Modify Instances
         if self.get_query_argument("single", False):
             instances = [self.model.one(filters=filters)]
@@ -236,9 +265,9 @@ class BaseHandler(RequestHandler):
 
         # Result
         self.set_status(201, "Patched")
-        self.write({'num_modified': num})
+        return {'num_modified': num}
 
-    def patch_single(self, instance_id: list):
+    def patch_single(self, instance_id: list) -> dict:
         """
             Patch one instance
 
@@ -251,6 +280,9 @@ class BaseHandler(RequestHandler):
         try:
             with self.model.session.begin_nested():
                 values = self.get_argument_values()
+
+                # Call Preprocessor
+                self._call_preprocessor(instance_id=instance_id, data=values)
 
                 # Get Instance
                 instance = self.model.get(instance_id)
@@ -276,17 +308,17 @@ class BaseHandler(RequestHandler):
                 self.set_status(201, "Patched")
 
                 # To Dict
-                self.write(to_dict(instance,
-                                   include_columns=self.include_columns,
-                                   include_relations=self.include_relations,
-                                   exclude_columns=self.exclude_columns,
-                                   exclude_relations=self.exclude_relations))
-
-            # Commit
-            self.model.session.commit()
+                return to_dict(instance,
+                               include_columns=self.include_columns,
+                               include_relations=self.include_relations,
+                               exclude_columns=self.exclude_columns,
+                               exclude_relations=self.exclude_relations)
         except SQLAlchemyError as ex:
             logging.exception(ex)
             self.send_error(status_code=400, exc_info=sys.exc_info())
+        finally:
+            # Commit
+            self.model.session.commit()
 
     def delete(self, instance_id: str=None):
         """
@@ -302,15 +334,21 @@ class BaseHandler(RequestHandler):
         if not 'delete' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
+        # Call Preprocessor
+        self._call_preprocessor()
+
         if instance_id is None:
             if self.allow_patch_many:
-                self.delete_many()
+                result = self.delete_many()
             else:
-                self.send_error(403)
+                raise MethodNotAllowedError(self.request.method, status_code=403)
         else:
-            self.delete_single(instance_id.split(","))
+            result = self.delete_single(instance_id.split(","))
 
-    def delete_many(self):
+        self._call_postprocessor(result=result)
+        self.finish(result)
+
+    def delete_many(self) -> dict:
         """
             Remove many instances
 
@@ -329,6 +367,9 @@ class BaseHandler(RequestHandler):
         # Limit
         limit = self.get_query_argument("limit", None)
 
+        # Call Preprocessor
+        self._call_preprocessor(filters=filters)
+
         # Modify Instances
         if self.get_query_argument("single", False):
             instance = self.model.one(filters=filters)
@@ -343,9 +384,9 @@ class BaseHandler(RequestHandler):
 
         # Result
         self.set_status(200, "Removed")
-        self.write({'num_removed': num})
+        return {'num_removed': num}
 
-    def delete_single(self, instance_id: list):
+    def delete_single(self, instance_id: list) -> dict:
         """
             Get one instance
 
@@ -354,6 +395,9 @@ class BaseHandler(RequestHandler):
 
             :statuscode 204: instance successfull removed
         """
+
+        # Call Preprocessor
+        self._call_preprocessor(instance_id=instance_id)
 
         # Get Instance
         instance = self.model.get(instance_id)
@@ -364,6 +408,7 @@ class BaseHandler(RequestHandler):
 
         # Status
         self.set_status(204, "Instance removed")
+        return {}
 
     def put(self, instance_id: str=None):
         """
@@ -380,13 +425,19 @@ class BaseHandler(RequestHandler):
         if not 'put' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
+        # Call Preprocessor
+        self._call_preprocessor()
+
         if instance_id is None:
             if self.allow_patch_many:
-                self.put_many()
+                result = self.put_many()
             else:
-                self.send_error(403)
+                raise MethodNotAllowedError(self.request.method, status_code=403)
         else:
-            self.put_single(instance_id.split(","))
+            result = self.put_single(instance_id.split(","))
+
+        self._call_postprocessor(result=result)
+        self.finish(result)
 
     put_many = patch_many
     put_single = patch_single
@@ -405,8 +456,24 @@ class BaseHandler(RequestHandler):
         if not 'post' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
+        # Call Preprocessor
+        self._call_preprocessor()
+
+        result = self.post_single()
+
+        self._call_postprocessor(result=result)
+        self.finish(result)
+
+    def post_single(self):
+        """
+            Post one instance
+        """
+
         try:
             values = self.get_argument_values()
+
+            # Call Preprocessor
+            self._call_preprocessor(data=values)
 
             # Create Instance
             instance = self.model(**values)
@@ -421,16 +488,17 @@ class BaseHandler(RequestHandler):
             self.set_status(201, "Created")
 
             # To Dict
-            self.write(to_dict(instance,
-                               include_columns=self.include_columns,
-                               include_relations=self.include_relations,
-                               exclude_columns=self.exclude_columns,
-                               exclude_relations=self.exclude_relations))
-            # Commit
-            self.model.session.commit()
-        except SQLAlchemyError as ex:
+            return to_dict(instance,
+                           include_columns=self.include_columns,
+                           include_relations=self.include_relations,
+                           exclude_columns=self.exclude_columns,
+                           exclude_relations=self.exclude_relations)
+        except SQLAlchemyError:
             self.send_error(status_code=400, exc_info=sys.exc_info())
             self.model.session.rollback()
+        finally:
+            # Commit
+            self.model.session.commit()
 
     @memoized_instancemethod
     def get_content_encoding(self) -> str:
@@ -594,12 +662,18 @@ class BaseHandler(RequestHandler):
         if not 'get' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
-        if instance_id is None:
-            self.get_many()
-        else:
-            self.get_single(instance_id.split(","))
+        # Call Preprocessor
+        self._call_preprocessor()
 
-    def get_single(self, instance_id: list):
+        if instance_id is None:
+            result = self.get_many()
+        else:
+            result = self.get_single(instance_id.split(","))
+
+        self._call_postprocessor(result=result)
+        self.finish(result)
+
+    def get_single(self, instance_id: list) -> dict:
         """
             Get one instance
 
@@ -607,17 +681,20 @@ class BaseHandler(RequestHandler):
             :type instance_id: list of primary keys
         """
 
+        # Call Preprocessor
+        self._call_preprocessor(instance_id=instance_id)
+
         # Get Instance
         instance = self.model.get(instance_id)
 
         # To Dict
-        self.write(to_dict(instance,
-                           include_columns=self.include_columns,
-                           include_relations=self.include_relations,
-                           exclude_columns=self.exclude_columns,
-                           exclude_relations=self.exclude_relations))
+        return to_dict(instance,
+                       include_columns=self.include_columns,
+                       include_relations=self.include_relations,
+                       exclude_columns=self.exclude_columns,
+                       exclude_relations=self.exclude_relations)
 
-    def get_many(self):
+    def get_many(self) -> dict:
         """
             Get all instances
 
@@ -655,18 +732,41 @@ class BaseHandler(RequestHandler):
         num_results = self.model.count(filters=filters)
         total_pages = ceil(num_results / results_per_page)
 
+        # Call Preprocessor
+        self._call_preprocessor(filters=filters)
+
         # Get Instances
         if self.get_query_argument("single", False):
             instances = [self.model.one(offset=offset, filters=filters)]
         else:
             instances = self.model.all(offset=offset, limit=limit, filters=filters)
 
-        self.write({'num_results': num_results,
-                    "total_pages": total_pages,
-                    "page": page + 1,
-                    "objects": to_dict(instances,
-                                       include_columns=self.include_columns,
-                                       include_relations=self.include_relations)})
+        return {'num_results': num_results,
+                "total_pages": total_pages,
+                "page": page + 1,
+                "objects": to_dict(instances,
+                                   include_columns=self.include_columns,
+                                   include_relations=self.include_relations)}
+
+    def _call_preprocessor(self, *args, **kwargs):
+        """
+            Calls a preprocessor with args and kwargs
+        """
+        func_name = inspect.stack()[1][3]
+
+        if func_name in self.preprocessor:
+            for func in self.preprocessor[func_name]:
+                func(*args, model=self.model, handler=self, **kwargs)
+
+    def _call_postprocessor(self, *args, **kwargs):
+        """
+            Calls a postprocessor with args and kwargs
+        """
+        func_name = inspect.stack()[1][3]
+
+        if func_name in self.postprocessor:
+            for func in self.postprocessor[func_name]:
+                func(*args, model=self.model, handler=self, **kwargs)
 
     @memoized_property
     def logger(self):
