@@ -91,8 +91,6 @@ class ModelWrapper(object):
             Returns the primary keys
 
             Inspired by flask-restless.helpers.primary_key_names
-
-            :param instance: Model ORM Instance
         """
         return _filter(instance, lambda field: isinstance(field, ColumnProperty) and field.primary_key or (
             isinstance(field, QueryableAttribute) and isinstance(field.property, ColumnProperty) and field.property.columns[0].primary_key))
@@ -104,14 +102,14 @@ class ModelWrapper(object):
         """
         return self.get_primary_keys(self.model)
 
+    primary_keys.__doc__ = get_primary_keys.__func__.__doc__
+
     @staticmethod
     def get_unique_keys(instance) -> dict:
         """
             Returns the primary keys
 
             Inspired by flask-restless.helpers.primary_key_names
-
-            :param instance: Model ORM Instance
         """
         return _filter(instance, lambda field: isinstance(field, ColumnProperty) and field.unique or (
             isinstance(field, QueryableAttribute) and isinstance(field.property, ColumnProperty) and field.property.columns[0].unique))
@@ -123,14 +121,14 @@ class ModelWrapper(object):
         """
         return self.get_unique_keys(self.model)
 
+    unique_keys.__doc__ = get_unique_keys.__func__.__doc__
+
     @staticmethod
     def get_foreign_keys(instance) -> list:
         """
             Returns the foreign keys
 
             Inspired by flask-restless.helpers.primary_key_names
-
-            :param instance: Model ORM Instance
         """
         return {field.key: field for key, field in inspect.getmembers(instance)
                 if isinstance(field, QueryableAttribute)
@@ -144,12 +142,12 @@ class ModelWrapper(object):
         """
         return self.get_foreign_keys(self.model)
 
+    foreign_keys.__doc__ = get_foreign_keys.__func__.__doc__
+
     @staticmethod
     def get_columns(instance) -> dict:
         """
             Returns the columns objects of the model
-
-            :param instance: Model ORM Instance
         """
         return _filter(instance, lambda field: isinstance(field, ColumnProperty) or (
             isinstance(field, QueryableAttribute) and isinstance(field.property, ColumnProperty)))
@@ -161,12 +159,12 @@ class ModelWrapper(object):
         """
         return self.get_columns(self.model)
 
+    columns.__doc__ = get_columns.__func__.__doc__
+
     @staticmethod
     def get_attributes(instance) -> dict:
         """
             Returns the attributes of the model
-
-            :param instance: Model ORM Instance
         """
         return _filter(instance,
                        lambda field: isinstance(field, MapperProperty) or isinstance(field, QueryableAttribute))
@@ -178,12 +176,12 @@ class ModelWrapper(object):
         """
         return self.get_attributes(self.model)
 
+    attributes.__doc__ = get_attributes.__func__.__doc__
+
     @staticmethod
     def get_relations(instance) -> dict:
         """
             Returns the relations objects of the model
-
-            :param instance: Model ORM Instance
         """
         return _filter(instance, lambda field: isinstance(field, RelationshipProperty) or (
             isinstance(field, QueryableAttribute) and isinstance(field.property, RelationshipProperty)))
@@ -195,12 +193,12 @@ class ModelWrapper(object):
         """
         return self.get_relations(self.model)
 
+    relations.__doc__ = get_relations.__func__.__doc__
+
     @staticmethod
     def get_hybrids(instance) -> list:
         """
             Returns the relations objects of the model
-
-            :param instance: Model ORM Instance
         """
         Proxy = namedtuple('Proxy', ['key', 'field'])
         if hasattr(instance, 'iterate_properties'):
@@ -217,14 +215,14 @@ class ModelWrapper(object):
         """
         return self.get_hybrids(self.model)
 
+    hybrids.__doc__ = get_hybrids.__func__.__doc__
+
     @staticmethod
     def get_proxies(instance) -> list:
         """
             Returns the proxies objects of the model
 
             Inspired by https://groups.google.com/forum/?fromgroups=#!topic/sqlalchemy/aDi_M4iH7d0
-
-            :param instance: Model ORM Instance
         """
         Proxy = namedtuple('Proxy', ['key', 'field'])
         if hasattr(instance, 'iterate_properties'):
@@ -240,6 +238,8 @@ class ModelWrapper(object):
         @see get_proxies
         """
         return self.get_proxies(self.model)
+
+    proxies.__doc__ = get_proxies.__func__.__doc__
 
 
 class SessionedModelWrapper(ModelWrapper):
