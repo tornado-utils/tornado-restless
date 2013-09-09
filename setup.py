@@ -10,7 +10,7 @@ from setuptools import setup
 
 setup(
     name='Tornado-Restless',
-    version='0.3.0',
+    version='0.3.1',
     author='Martin Martimeo',
     author_email='martin@martimeo.de',
     url='https://github.com/MartinMartimeo/tornado-restless',

@@ -38,26 +38,28 @@ class BaseHandler(RequestHandler):
     def initialize(self,
                    model,
                    manager,
-                   methods,
-                   allow_patch_many,
-                   allow_method_override,
+                   methods: set,
+                   allow_patch_many: bool,
+                   allow_method_override: bool,
                    validation_exceptions,
-                   include_columns,
-                   exclude_columns,
-                   results_per_page,
-                   max_results_per_page):
+                   include_columns: list,
+                   exclude_columns: list,
+                   results_per_page: int,
+                   max_results_per_page: int):
         """
 
-        :param model: The Model for which this handler has been created
-        :param methods:
-        :param manager:
-        :param allow_patch_many:
-        :param allow_method_override:
+        Init of the handler, derives arguments from api create_api_blueprint
+
+        :param model: The sqlalchemy model
+        :param manager: The tornado_restless Api Manager
+        :param methods: Allowed methods for this model
+        :param allow_patch_many: Allow PATCH with multiple datasets
+        :param allow_method_override: Support X-HTTP-Method-Override Header
         :param validation_exceptions:
-        :param include_columns:
-        :param exclude_columns:
-        :param results_per_page:
-        :param max_results_per_page:
+        :param include_columns: Whitelist of columns to be included
+        :param exclude_columns: Blacklist of columns to be excluded
+        :param results_per_page: The default value of how many results are returned per request
+        :param max_results_per_page: The hard upper limit of resutest per page
         """
 
         # Override Method if Header provided

@@ -3,8 +3,6 @@
 """
 
 """
-import sqlalchemy.orm
-from sqlalchemy.util import memoized_property
 from tornado.web import Application, URLSpec
 
 from .handler import BaseHandler
@@ -15,6 +13,12 @@ __date__ = '26.04.13 - 22:25'
 
 
 class ApiManager(object):
+    """
+        The tornado restless engine
+
+        You normally only need one instance of this class to spawn your tornado routes
+    """
+
     METHODS_READ = frozenset(['GET'])
     METHODS_MODIFY = frozenset(['POST', 'PUT', 'PATCH'])
     METHODS_DELETE = frozenset(['DELETE'])
@@ -26,6 +30,7 @@ class ApiManager(object):
                  application: Application,
                  session_maker: type=None):
         """
+        Create an instance of the tornado restless engine
 
         :param session_maker: is a sqlalchemy.orm.Session class factory
         :param application: is the tornado.web.Application object
@@ -42,28 +47,29 @@ class ApiManager(object):
                              allow_patch_many: bool=False,
                              allow_method_override: bool=False,
                              validation_exceptions=None,
-                             include_columns=None,
-                             exclude_columns=None,
+                             include_columns: list=None,
+                             exclude_columns: list=None,
                              results_per_page: int=10,
                              max_results_per_page: int=100,
                              blueprint_prefix: str='',
-                             handler_class: BaseHandler=BaseHandler) -> URLSpec:
+                             handler_class: type=BaseHandler) -> URLSpec:
         """
+        Create a tornado route for a sqlalchemy model
 
-
-        :param model:
-        :param methods: Allow methods
+        :param model: The sqlalchemy model
+        :param methods: Allowed methods for this model
         :param url_prefix: The url prefix of the application
         :param collection_name:
         :param allow_patch_many: Allow PATCH with multiple datasets
         :param allow_method_override: Support X-HTTP-Method-Override Header
         :param validation_exceptions:
-        :param include_columns:
-        :param exclude_columns:
+        :param include_columns: Whitelist of columns to be included
+        :param exclude_columns: Blacklist of columns to be excluded
         :param results_per_page: The default value of how many results are returned per request
         :param max_results_per_page: The hard upper limit of resutest per page
         :param blueprint_prefix: The Prefix that will be used to unique collection_name for named_handlers
-        :param handler_class: The Handler Class that will be registered, for customisation extend BaseHandler
+        :param handler_class: The Handler Class that will be used in the route
+        :type handler_class: tornado_restless.handler.BaseHandler or a subclass
         :return: :class:`tornado.web.URLSpec`
         :raise: IllegalArgumentError
         """
@@ -94,7 +100,7 @@ class ApiManager(object):
                    model,
                    virtualhost=r".*$", *args, **kwargs):
         """
-        Creates and registers a route for the model
+        Creates and registers a route for the model in your tornado application
 
         The positional and keyword arguments are passed directly to the create_api_blueprint method
 
