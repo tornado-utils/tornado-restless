@@ -199,10 +199,11 @@ def to_dict(instance,
         rtn = {}
         for column in include_columns:
             rtn[column] = to_dict(getattr(instance, column))
-        for (column, include_relation) in include_relations.items():
-            rtn[column] = to_dict(getattr(instance, column),
-                                  include_columns=include_relations[0],
-                                  include_relations=include_relations[1])
+        if include_relations is not None:
+            for (column, include_relation) in include_relations.items():
+                rtn[column] = to_dict(getattr(instance, column),
+                                      include_columns=include_relations[0],
+                                      include_relations=include_relations[1])
         return rtn
 
     if exclude_columns is None:
