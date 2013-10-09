@@ -150,6 +150,9 @@ def to_dict(instance,
         :param exclude_columns: Columns that should not be included for an instance
         :param exclude_relations: Relations that should not be include for an instance
     """
+    if (exclude_columns is not None or exclude_relations is not None) and \
+            (include_columns is not None or include_relations is not None):
+        raise ValueError('Cannot specify both include and exclude.')
 
     # None
     if instance is None:
@@ -157,11 +160,23 @@ def to_dict(instance,
 
     # Plain List [Continue deepness]
     if isinstance(instance, list):
-        return [to_dict(x, include_relations=include_relations) for x in instance]
+        return [to_dict(
+            x,
+            include_relations=include_relations,
+            include_columns=include_columns,
+            exclude_columns=exclude_relations,
+            exclude_relations=exclude_columns
+        ) for x in instance]
 
     # Plain Dictionary [Continue deepness]
     if isinstance(instance, dict):
-        return {k: to_dict(v, include_relations=include_relations) for k, v in instance.items()}
+        return {k: to_dict(
+            v,
+            include_relations=include_relations,
+            include_columns=include_columns,
+            exclude_relations=exclude_relations,
+            exclude_columns=exclude_columns
+        ) for k, v in instance.items()}
 
     # Int / Float / Str
     if isinstance(instance, (int, float, str)):
