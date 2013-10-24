@@ -126,6 +126,21 @@ class TestGet(TestBase):
         assert flask_computer_cpu == tornado_computer_cpu
         assert isinstance(tornado_computer_cpu, float)
 
+    def test_results_per_page(self):
+        """
+            Test acknowledgment of parameter results_per_page
+        """
+
+        params = dict(results_per_page=2)
+
+        flask_data = self.curl_flask('/api/persons', params=params)
+        tornado_data = self.curl_tornado('/api/persons', params=params)
+
+        logging.debug(flask_data)
+        logging.debug(tornado_data)
+
+        assert self.subsetOf(flask_data, tornado_data)
+        assert len(flask_data['objects']) == 2 == len(tornado_data['objects'])
 
     def test_nothing(self):
         """

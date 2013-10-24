@@ -711,7 +711,7 @@ class BaseHandler(RequestHandler):
         """
 
         # Results per Page
-        results_per_page = self.get_query_argument("results_per_page", self.results_per_page)
+        results_per_page = int(self.get_argument("results_per_page", self.results_per_page))
         if results_per_page > self.max_results_per_page:
             raise IllegalArgumentError("request.results_per_page > application.max_results_per_page")
 
