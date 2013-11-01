@@ -164,8 +164,8 @@ def to_dict(instance,
             x,
             include_relations=include_relations,
             include_columns=include_columns,
-            exclude_columns=exclude_relations,
-            exclude_relations=exclude_columns
+            exclude_columns=exclude_columns,
+            exclude_relations=exclude_relations
         ) for x in instance]
 
     # Plain Dictionary [Continue deepness]
@@ -247,6 +247,8 @@ def to_dict(instance,
         # Include Relations but only one deep
         for column in get_relations:
             if exclude_relations is not None and column in exclude_relations:
+                continue
+            if exclude_columns is not None and column in exclude_columns:
                 continue
             if include_relations is None or column in include_relations:
                 rtn[column] = to_dict(getattr(instance, column), include_relations=())

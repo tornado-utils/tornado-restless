@@ -746,7 +746,9 @@ class BaseHandler(RequestHandler):
                 "page": page + 1,
                 "objects": to_dict(instances,
                                    include_columns=self.include_columns,
-                                   include_relations=self.include_relations)}
+                                   include_relations=self.include_relations,
+                                   exclude_columns=self.exclude_columns,
+                                   exclude_relations=self.exclude_relations)}
 
     def _call_preprocessor(self, *args, **kwargs):
         """
