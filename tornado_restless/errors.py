@@ -14,8 +14,9 @@ class IllegalArgumentError(ValueError, HTTPError):
         An exception occuring when there was a problem in parsing arguments or model data
     """
 
-    def __init__(self, log_message=None, status_code=400, *args, **kwargs):
-        super().__init__(status_code, log_message, *args, **kwargs)
+    def __init__(self, log_message, status_code=400, *args, **kwargs):
+        ValueError.__init__(self, log_message)
+        HTTPError.__init__(self, status_code, log_message, *args, **kwargs)
 
 
 class DictConvertionError(HTTPError):
