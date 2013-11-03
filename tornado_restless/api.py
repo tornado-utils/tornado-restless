@@ -51,6 +51,7 @@ class ApiManager(object):
                              validation_exceptions=None,
                              include_columns: list=None,
                              exclude_columns: list=None,
+                             exclude_relations: bool=False,
                              results_per_page: int=10,
                              max_results_per_page: int=100,
                              blueprint_prefix: str='',
@@ -67,6 +68,7 @@ class ApiManager(object):
         :param validation_exceptions:
         :param include_columns: Whitelist of columns to be included
         :param exclude_columns: Blacklist of columns to be excluded
+        :param exclude_relations: Prevent relationships from loaded by default
         :param results_per_page: The default value of how many results are returned per request
         :param max_results_per_page: The hard upper limit of resutest per page
         :param blueprint_prefix: The Prefix that will be used to unique collection_name for named_handlers
@@ -92,6 +94,7 @@ class ApiManager(object):
                   'validation_exceptions': validation_exceptions,
                   'include_columns': include_columns,
                   'exclude_columns': exclude_columns,
+                  'exclude_relations': exclude_relations,
                   'results_per_page': results_per_page,
                   'max_results_per_page': max_results_per_page}
 

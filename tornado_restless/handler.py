@@ -58,6 +58,7 @@ class BaseHandler(RequestHandler):
                    validation_exceptions,
                    include_columns: list,
                    exclude_columns: list,
+                   exclude_relations: bool,
                    results_per_page: int,
                    max_results_per_page: int):
         """
@@ -74,6 +75,7 @@ class BaseHandler(RequestHandler):
         :param validation_exceptions:
         :param include_columns: Whitelist of columns to be included
         :param exclude_columns: Blacklist of columns to be excluded
+        :param exclude_relations: Prevent relationships from loaded by default
         :param results_per_page: The default value of how many results are returned per request
         :param max_results_per_page: The hard upper limit of resutest per page
 
@@ -99,6 +101,9 @@ class BaseHandler(RequestHandler):
 
         self.include_columns, self.include_relations = self.parse_columns(include_columns)
         self.exclude_columns, self.exclude_relations = self.parse_columns(exclude_columns)
+
+        if exclude_relations and self.include_relations is None:
+            self.include_relations = ()
 
     def prepare(self):
         """
@@ -308,11 +313,7 @@ class BaseHandler(RequestHandler):
                 self.set_status(201, "Patched")
 
                 # To Dict
-                return to_dict(instance,
-                               include_columns=self.include_columns,
-                               include_relations=self.include_relations,
-                               exclude_columns=self.exclude_columns,
-                               exclude_relations=self.exclude_relations)
+                return self.to_dict(instance)
         except SQLAlchemyError as ex:
             logging.exception(ex)
             self.send_error(status_code=400, exc_info=sys.exc_info())
@@ -488,11 +489,7 @@ class BaseHandler(RequestHandler):
             self.set_status(201, "Created")
 
             # To Dict
-            return to_dict(instance,
-                           include_columns=self.include_columns,
-                           include_relations=self.include_relations,
-                           exclude_columns=self.exclude_columns,
-                           exclude_relations=self.exclude_relations)
+            return self.to_dict(instance)
         except SQLAlchemyError:
             self.send_error(status_code=400, exc_info=sys.exc_info())
             self.model.session.rollback()
@@ -688,11 +685,7 @@ class BaseHandler(RequestHandler):
         instance = self.model.get(instance_id)
 
         # To Dict
-        return to_dict(instance,
-                       include_columns=self.include_columns,
-                       include_relations=self.include_relations,
-                       exclude_columns=self.exclude_columns,
-                       exclude_relations=self.exclude_relations)
+        return self.to_dict(instance)
 
     def get_many(self) -> dict:
         """
@@ -744,11 +737,7 @@ class BaseHandler(RequestHandler):
         return {'num_results': num_results,
                 "total_pages": total_pages,
                 "page": page + 1,
-                "objects": to_dict(instances,
-                                   include_columns=self.include_columns,
-                                   include_relations=self.include_relations,
-                                   exclude_columns=self.exclude_columns,
-                                   exclude_relations=self.exclude_relations)}
+                "objects": self.to_dict(instances)}
 
     def _call_preprocessor(self, *args, **kwargs):
         """
@@ -776,3 +765,15 @@ class BaseHandler(RequestHandler):
             Tornado Restless Logger
         """
         return logging.getLogger('tornado.restless')
+
+    def to_dict(self, instance):
+        """
+            Wrapper to convert.to_dict with arguments from blueprint init
+
+            :param instance: Instance to be translated
+        """
+        return to_dict(instance,
+                       include_columns=self.include_columns,
+                       include_relations=self.include_relations,
+                       exclude_columns=self.exclude_columns,
+                       exclude_relations=self.exclude_relations)
