@@ -39,7 +39,7 @@ Arguments:
 
  :http:method:`get` ::
 
-      def get(model: ModelWrapper, handler: BaseHandler):
+      def get(search_params: dict, model: ModelWrapper, handler: BaseHandler):
           """ Called for a GET request """
 
       def get_single(instance_id: list, model: ModelWrapper, handler: BaseHandler):
@@ -52,8 +52,9 @@ Arguments:
 
  :http:method:`post` ::
 
-      def post(model: ModelWrapper, handler: BaseHandler):
+      def post(search_params: dict, model: ModelWrapper, handler: BaseHandler):
           """ Called for a POST request """
+          pass
 
       def post_single(data: dict, model: ModelWrapper, handler: BaseHandler):
           """ Called on a single POST request """
@@ -61,8 +62,9 @@ Arguments:
 
  :http:method:`delete` ::
 
-      def delete(model: ModelWrapper, handler: BaseHandler):
+      def delete(search_params: dict, model: ModelWrapper, handler: BaseHandler):
           """ Called for a DELETE request """
+          pass
 
       def delete_single(instance_id: list, model: ModelWrapper, handler: BaseHandler):
           """ Called on a single DELETE request """
@@ -74,7 +76,7 @@ Arguments:
 
  :http:method:`patch` / :http:method:`put` ::
 
-      def patch(model: ModelWrapper, handler: BaseHandler):
+      def patch(search_params: dict, model: ModelWrapper, handler: BaseHandler):
           """ Called for a PATCH request """
 
       def patch_single(instance_id: list, data: dict, model: ModelWrapper, handler: BaseHandler):
@@ -89,7 +91,7 @@ To hold the processing raise any exception in the function. If you want to set t
 a somehow meaningfull error message use tornado.web.HTTPError or a subclass. For example for a general authentification
 layer you could use somewhat similiar to::
 
-      def check_auth(model: ModelWrapper, handler: BaseHandler):
+      def check_auth(model: ModelWrapper, handler: BaseHandler, **kw):
 
           # Get the current user
           current_user = handler.current_user
@@ -98,17 +100,17 @@ layer you could use somewhat similiar to::
           if not is_authorized_to_modify(current_user, model):
                raise HTTPError(status_code=401, log_message='Not Authorized')
 
-      manager.create_api(Person, preprocessors=dict(PREPARE=[check_auth]))
+      manager.create_api(Person, preprocessor=dict(prepare=[check_auth]))
 
 Queries without an instance_id are translated to a search according the filters/orders parameters of "q".
 If you want for example always to return your elements in ascending order you can add an GET_MANY preprocessor::
 
-      def order_asc(filters: list, model: ModelWrapper, handler: BaseHandler):
+      def order_asc(filters: list, model: ModelWrapper, handler: BaseHandler, **kw):
 
           # Apply the asc filter
           filters.append(model.asc())
 
-      manager.create_api(Person, preprocessors=dict(GET_MANY=[order_asc]))
+      manager.create_api(Person, preprocessor=dict(get_many=[order_asc]))
 
 
 :mod:`processors.postprocessors` -- Request postprocessors

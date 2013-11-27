@@ -22,16 +22,16 @@ API
 
 .. toctree::
    :maxdepth: 1
-          :glob:
+   :glob:
 
-       api/*
+   api/*
 
 Additional information
 ----------------------
 
 .. toctree::
-:maxdepth: 1
+   :maxdepth: 1
 
-       limitations
+   limitations
    license
-       processors
+   processors

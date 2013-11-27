@@ -216,7 +216,7 @@ class BaseHandler(RequestHandler):
         if not 'patch' in self.methods:
             raise MethodNotAllowedError(self.request.method)
 
-        self._call_preprocessor(instance_id=instance_id)
+        self._call_preprocessor(search_params=self.search_params)
 
         if instance_id is None:
             if self.allow_patch_many:
@@ -336,7 +336,7 @@ class BaseHandler(RequestHandler):
             raise MethodNotAllowedError(self.request.method)
 
         # Call Preprocessor
-        self._call_preprocessor()
+        self._call_preprocessor(search_params=self.search_params)
 
         if instance_id is None:
             if self.allow_patch_many:
@@ -427,7 +427,7 @@ class BaseHandler(RequestHandler):
             raise MethodNotAllowedError(self.request.method)
 
         # Call Preprocessor
-        self._call_preprocessor()
+        self._call_preprocessor(search_params=self.search_params)
 
         if instance_id is None:
             if self.allow_patch_many:
@@ -458,7 +458,7 @@ class BaseHandler(RequestHandler):
             raise MethodNotAllowedError(self.request.method)
 
         # Call Preprocessor
-        self._call_preprocessor()
+        self._call_preprocessor(search_params=self.search_params)
 
         result = self.post_single()
 
@@ -557,6 +557,17 @@ class BaseHandler(RequestHandler):
         else:
             return default
 
+    @property
+    def search_params(self) -> dict:
+        """
+            The 'q' Dictionary
+        """
+        try:
+            return self._search_params
+        except AttributeError:
+            self._search_params = loads(self.get_argument("q", default="{}"))
+            return self._search_params
+
     def get_query_argument(self, name: str, default=RequestHandler._ARG_DEFAULT):
         """
         Get an argument named key from json encoded body
@@ -569,13 +580,8 @@ class BaseHandler(RequestHandler):
         :query q: The query argument
         """
 
-        try:
-            query = self._query
-        except AttributeError:
-            query = self._query = loads(self.get_argument("q", default="{}"))
-
-        if name in query:
-            return query[name]
+        if name in self.search_params:
+            return self.search_params[name]
         elif default is RequestHandler._ARG_DEFAULT:
             raise HTTPError(400, "Missing argument %s" % name)
         else:
@@ -616,7 +622,7 @@ class BaseHandler(RequestHandler):
 
         # Exclude Columns
         if self.exclude_columns is not None:
-            for column in self.exclude_columns:
+            for column in list(self.exclude_columns):
                 if column in values:
                     del values[column]
 
@@ -660,7 +666,7 @@ class BaseHandler(RequestHandler):
             raise MethodNotAllowedError(self.request.method)
 
         # Call Preprocessor
-        self._call_preprocessor()
+        self._call_preprocessor(search_params=self.search_params)
 
         if instance_id is None:
             result = self.get_many()
@@ -718,15 +724,15 @@ class BaseHandler(RequestHandler):
         # Filters
         filters = self.get_filters()
 
+        # Call Preprocessor
+        self._call_preprocessor(filters=filters)
+
         # Limit
         limit = self.get_query_argument("limit", results_per_page)
 
         # Num Results
         num_results = self.model.count(filters=filters)
         total_pages = ceil(num_results / results_per_page)
-
-        # Call Preprocessor
-        self._call_preprocessor(filters=filters)
 
         # Get Instances
         if self.get_query_argument("single", False):
