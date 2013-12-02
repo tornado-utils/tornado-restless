@@ -728,11 +728,14 @@ class BaseHandler(RequestHandler):
         self._call_preprocessor(filters=filters)
 
         # Limit
-        limit = self.get_query_argument("limit", results_per_page)
+        limit = self.get_query_argument("limit", results_per_page if results_per_page > 0 else None)
 
         # Num Results
         num_results = self.model.count(filters=filters)
-        total_pages = ceil(num_results / results_per_page)
+        if results_per_page:
+            total_pages = ceil(num_results / results_per_page)
+        else:
+            total_pages = 1
 
         # Get Instances
         if self.get_query_argument("single", False):
