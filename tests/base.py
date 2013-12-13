@@ -15,7 +15,7 @@ import requests
 from sqlalchemy import create_engine, schema, event, Column, Integer, String, ForeignKey, DateTime, func, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import sessionmaker, relationship, scoped_session
+from sqlalchemy.orm import sessionmaker, relationship, scoped_session, backref
 import tornado.web
 import tornado.ioloop
 from flask.ext.restless import APIManager as FlaskRestlessManager
@@ -143,6 +143,13 @@ class TestBase(object):
         Session = self.alchemy['Session']
         engine = self.alchemy['engine']
 
+        class City(Base):
+            __tablename__ = "cities"
+
+            _plz = Column(String(6), primary_key=True)
+
+            name = Column(String, unique=True)
+
         class Person(Base):
             __tablename__ = 'persons'
 
@@ -162,6 +169,19 @@ class TestBase(object):
                 self.name = name
                 self.birth = datetime.now().replace(year=datetime.now().year - age)
 
+        class City2Person(Base):
+            __tablename__ = 'city2persons'
+
+            _city = Column(ForeignKey(City._plz), primary_key=True)
+            city = relationship(City, lazy="joined", backref=backref('persons', lazy="dynamic"))
+
+            _user = Column(ForeignKey(Person._id), primary_key=True)
+            user = relationship(Person, lazy="joined", backref=backref('cities', lazy="dynamic"))
+
+            def __init__(self, city, user):
+                self._city = city._plz
+                self._user = user._id
+
         class Computer(Base):
             __tablename__ = 'computers'
 
@@ -173,17 +193,15 @@ class TestBase(object):
             _user = Column(ForeignKey(Person._id))
             user = relationship(Person, backref='computers')
 
-        class City(Base):
-            __tablename__ = "cities"
-
-            _plz = Column(String(6), primary_key=True)
-
-            name = Column(String, unique=True)
-
         Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
 
         self.models = {'Person': (Person, "all"), 'Computer': (Computer, "all"), 'City': (City, "read")}
+
+        frankfurt = City(_plz=60400 ,name="Frankfurt")
+        berlin = City(_plz=10800, name="Berlin")
+
+        self.citites = [frankfurt, berlin]
 
         anastacia = Person('Anastacia', 44)
         bernd = Person('Bernd', 48)
@@ -203,8 +221,15 @@ class TestBase(object):
         self.computers = [a1, a2, b1, e1, e2]
 
         session = Session()
+        session.add_all(self.citites)
         session.add_all(self.persons.values())
         session.add_all(self.computers)
+        session.commit()
+
+        session.refresh(bernd)
+        session.refresh(anastacia)
+        self.assocs = [City2Person(frankfurt, bernd), City2Person(frankfurt, anastacia), City2Person(berlin, bernd)]
+        session.add_all(self.assocs)
         session.commit()
 
     def tearDown(self):

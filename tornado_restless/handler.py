@@ -6,7 +6,6 @@
     Handles all registered blueprints, you may override this class and
      use the modification via create_api_blueprint(handler_class=...)
 """
-from collections import defaultdict
 import inspect
 from json import loads
 import logging
@@ -14,6 +13,7 @@ from math import ceil
 from traceback import print_exception
 from urllib.parse import parse_qs
 import sys
+import itertools
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import UnmappedInstanceError
@@ -58,7 +58,6 @@ class BaseHandler(RequestHandler):
                    validation_exceptions,
                    include_columns: list,
                    exclude_columns: list,
-                   exclude_relations: bool,
                    results_per_page: int,
                    max_results_per_page: int):
         """
@@ -75,7 +74,6 @@ class BaseHandler(RequestHandler):
         :param validation_exceptions:
         :param include_columns: Whitelist of columns to be included
         :param exclude_columns: Blacklist of columns to be excluded
-        :param exclude_relations: Prevent relationships from loaded by default
         :param results_per_page: The default value of how many results are returned per request
         :param max_results_per_page: The hard upper limit of resutest per page
 
@@ -99,11 +97,8 @@ class BaseHandler(RequestHandler):
         self.results_per_page = results_per_page
         self.max_results_per_page = max_results_per_page
 
-        self.include_columns, self.include_relations = self.parse_columns(include_columns)
-        self.exclude_columns, self.exclude_relations = self.parse_columns(exclude_columns)
-
-        if exclude_relations and self.include_relations is None:
-            self.include_relations = ()
+        self.include = self.parse_columns(include_columns)
+        self.exclude = self.parse_columns(exclude_columns)
 
     def prepare(self):
         """
@@ -117,38 +112,33 @@ class BaseHandler(RequestHandler):
         """
         self._call_postprocessor()
 
-    def parse_columns(self, strings: list) -> "(list, list)":
+    def parse_columns(self, strings: list) -> dict:
         """
             Parse a list of column names (name1, name2, relation.name1, ...)
 
             :param strings: List of Column Names
             :return:
         """
-        columns = []
-        relations = defaultdict(list)
+        columns = {}
 
         # Strings
         if strings is None:
-            return None, None
+            return None
 
         # Parse
         for column in [column.split(".", 1) for column in strings]:
             if len(column) == 1:
-                columns.append(column[0])
+                columns[column[0]] = True
             else:
-                relations[column[0]].append(column[1])
-
-        # Delete relations in columns
-        for column in relations:
-            if column in columns:
-                columns.remove(column)
+                columns.setdefault(column[0], []).append(column[1])
 
         # Now parse relations
-        for (key, relation_columns) in relations.items():
-            relations[key] = self.parse_columns(relation_columns)
+        for (key, item) in columns.items():
+            if isinstance(item, list):
+                columns[key] = itertools.chain.from_iterable(self.parse_columns(strings) for strings in item)
 
         # Return
-        return columns, relations
+        return columns
 
     def get_filters(self):
         """
@@ -611,8 +601,8 @@ class BaseHandler(RequestHandler):
         """
 
         # Include Columns
-        if self.include_columns is not None:
-            values = {k: self.get_body_argument(k) for k in self.include_columns}
+        if self.include is not None:
+            values = {k: self.get_body_argument(k) for k in self.include}
         else:
             values = {k: v for k, v in self.get_body_arguments().items()}
 
@@ -621,8 +611,8 @@ class BaseHandler(RequestHandler):
             del values["q"]
 
         # Exclude Columns
-        if self.exclude_columns is not None:
-            for column in list(self.exclude_columns):
+        if self.exclude is not None:
+            for column in list(self.exclude):
                 if column in values:
                     del values[column]
 
@@ -691,6 +681,7 @@ class BaseHandler(RequestHandler):
         instance = self.model.get(instance_id)
 
         # To Dict
+        logging.error(self.to_dict(instance))
         return self.to_dict(instance)
 
     def get_many(self) -> dict:
@@ -782,7 +773,5 @@ class BaseHandler(RequestHandler):
             :param instance: Instance to be translated
         """
         return to_dict(instance,
-                       include_columns=self.include_columns,
-                       include_relations=self.include_relations,
-                       exclude_columns=self.exclude_columns,
-                       exclude_relations=self.exclude_relations)
+                       include=self.include,
+                       exclude=self.exclude)

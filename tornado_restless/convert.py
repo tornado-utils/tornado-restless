@@ -4,14 +4,20 @@
 
 """
 from datetime import datetime, date, time
+import collections
+import itertools
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
+from sqlalchemy.orm.query import Query
 
 from .errors import IllegalArgumentError, DictConvertionError
 from .wrapper import ModelWrapper
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '23.05.13 - 17:41'
+
+__datetypes__ = (datetime, time, date)
+__basetypes__ = (str, int, bool, float)
 
 
 def to_filter(instance,
@@ -134,144 +140,108 @@ def to_filter(instance,
     return alchemy_filters
 
 
+def to_deep(include,
+            exclude,
+            key):
+    """
+        Extract the include/exclude information for key
+
+        :param include: Columns and Relations that should be included for an instance
+        :param exclude: Columns and Relations that should not be included for an instance
+        :param key: The key that should be extracted
+    """
+    rtn = {}
+
+    try:
+        rtn['include'] = include.setdefault(key, False)
+    except AttributeError:
+        rtn['include'] = False
+
+    try:
+        rtn['exclude'] = exclude[key]
+    except TypeError:
+        rtn['exclude'] = None
+
+    return rtn
+
+
 def to_dict(instance,
-            include_columns=None,
-            include_relations=None,
-            exclude_columns=None,
-            exclude_relations=None):
+            include=None,
+            exclude=None):
     """
         Translates sqlalchemy instance to dictionary
 
         Inspired by flask-restless.helpers.to_dict
 
         :param instance:
-        :param include_columns: Columns that should be included for an instance
-        :param include_relations: Relations that should be include for an instance
-        :param exclude_columns: Columns that should not be included for an instance
-        :param exclude_relations: Relations that should not be include for an instance
+        :param include: Columns and Relations that should be included for an instance
+        :param exclude: Columns and Relations that should not be included for an instance
     """
-    if (exclude_columns is not None or exclude_relations is not None) and \
-            (include_columns is not None or include_relations is not None):
+    if exclude is not None and include is not None:
         raise ValueError('Cannot specify both include and exclude.')
 
     # None
     if instance is None:
         return None
 
-    # Plain List [Continue deepness]
-    if isinstance(instance, list):
-        return [to_dict(
-            x,
-            include_relations=include_relations,
-            include_columns=include_columns,
-            exclude_columns=exclude_columns,
-            exclude_relations=exclude_relations
-        ) for x in instance]
-
-    # Plain Dictionary [Continue deepness]
-    if isinstance(instance, dict):
-        return {k: to_dict(
-            v,
-            include_relations=include_relations,
-            include_columns=include_columns,
-            exclude_relations=exclude_relations,
-            exclude_columns=exclude_columns
-        ) for k, v in instance.items()}
-
     # Int / Float / Str
-    if isinstance(instance, (int, float, str)):
+    if isinstance(instance, __basetypes__):
         return instance
 
     # Date & Time
-    if isinstance(instance, (datetime, time, date)):
+    if isinstance(instance, __datetypes__):
         return instance.isoformat()
 
-    # Any Dictionary Object (e.g. _AssociationDict) [Stop deepness]
+    # Any Dictionary
     if isinstance(instance, dict) or hasattr(instance, 'items'):
-        return {k: to_dict(v, include_relations=()) for k, v in instance.items()}
+        return {k: to_dict(v, **to_deep(include, exclude, k)) for k, v in instance.items()}
 
-    # Any Iterable Object (e.g. _AssociationList) [Stop deepness]
+    # Any List
     if isinstance(instance, list) or hasattr(instance, '__iter__'):
-        return [to_dict(x, include_relations=()) for x in instance]
+        return [to_dict(x, include=include, exclude=exclude) for x in instance]
 
     # Include Columns given
-    if include_columns is not None:
+    if isinstance(include, collections.Iterable):
         rtn = {}
-        for column in include_columns:
-            rtn[column] = to_dict(getattr(instance, column))
-        if include_relations is not None:
-            for (column, include_relation) in include_relations.items():
-                rtn[column] = to_dict(getattr(instance, column),
-                                      include_columns=include_relations[0],
-                                      include_relations=include_relations[1])
+        for column in include:
+            rtn[column] = to_dict(getattr(instance, column), **to_deep(include, exclude, column))
         return rtn
 
-    if exclude_columns is None:
-        exclude_columns = []
-
-    if exclude_relations is None:
-        exclude_relations = {}
-
-    # SQLAlchemy instance?
+    # Include all columns if it is a SQLAlchemy instance
     try:
-        get_columns = ModelWrapper.get_columns(object_mapper(instance)).keys()
-        get_relations = ModelWrapper.get_relations(object_mapper(instance))
-        get_attributes = ModelWrapper.get_attributes(object_mapper(instance)).keys()
-        get_proxies = [p.key for p in ModelWrapper.get_proxies(object_mapper(instance))]
-        get_hybrids = [p.key for p in ModelWrapper.get_hybrids(object_mapper(instance))]
-
-        rtn = {}
-
-        # Include Columns
-        for column in get_columns:
-            if not column in exclude_columns:
-                rtn[column] = to_dict(getattr(instance, column))
-
-        # Include AssociationProxy (may be list/dict/col so check for exclude_relations and exclude_columns)
-        for column in get_proxies:
-            if exclude_relations is not None and column in exclude_relations:
-                continue
-            if exclude_columns is not None and column in exclude_columns:
-                continue
-            if include_relations is None or column in include_relations:
-                try:
-                    rtn[column] = to_dict(getattr(instance, column))
-                except AttributeError:
-                    rtn[column] = None
-
-        # Include Hybrid Properties
-        for column in get_hybrids:
-            if not column in exclude_columns:
-                rtn[column] = to_dict(getattr(instance, column))
-
-        # Include Relations but only one deep
-        for column, relation_property in get_relations.items():
-            if exclude_relations is not None and column in exclude_relations:
-                continue
-            if exclude_columns is not None and column in exclude_columns:
-                continue
-
-            if (include_relations is None and column in instance.__dict__) or \
-                    (include_relations and column in include_relations):
-                rtn[column] = to_dict(getattr(instance, column), include_relations=())
-
-        # Try to include everything else
-        for column in get_attributes:
-            if column in get_relations or column in get_hybrids or column in get_proxies:
-                continue
-            if column in get_columns:
-                continue
-
-            if exclude_relations is not None and column in exclude_relations:
-                continue
-            if exclude_columns is not None and column in exclude_columns:
-                continue
-
-            try:
-                rtn[column] = to_dict(getattr(instance, column))
-            except AttributeError:
-                rtn[column] = None
-
-        return rtn
+        columns = ModelWrapper.get_columns(object_mapper(instance)).keys()
+        relations = ModelWrapper.get_relations(object_mapper(instance)).keys()
+        attributes = ModelWrapper.get_attributes(object_mapper(instance)).keys()
+        proxies = [p.key for p in ModelWrapper.get_proxies(object_mapper(instance))]
+        hybrids = [p.key for p in ModelWrapper.get_hybrids(object_mapper(instance))]
+        attributes = itertools.chain(columns, relations, proxies, hybrids, attributes)
     except UnmappedInstanceError:
         raise DictConvertionError("Could not convert argument to plain dict")
+
+    rtn = {}
+
+    # Include AssociationProxy and Hybrids (may be list/dict/col)
+    for column in attributes:
+
+        if exclude is not None and column in exclude:
+            continue
+        if column in rtn:
+            continue
+
+        # Prevent unnec. db calls
+        if include is False and column not in hybrids and column not in columns:
+            continue
+
+        # Get Attribute
+        node = getattr(instance, column)
+
+        # Don't execute queries if stoping deepnes
+        if include is False and isinstance(node, Query):
+            continue
+        # Otherwise query it
+        elif isinstance(node, Query):
+            node = node.all()
+
+        # Convert it
+        rtn[column] = to_dict(node, **to_deep(include, exclude, column))
+    return rtn
