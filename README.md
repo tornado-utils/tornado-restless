@@ -18,14 +18,13 @@ Copyright license
 
 flask-restless was dual licensed under the GNU Affero General Public License and 3-clause BSD License.
 
-tornado-restless is licensed under the GNU Affero General Public License, for more information see the LICENSE.txt.
+tornado-restless is dual licences under the GNU Affero General Public License or the 3-clause BSD License.
+For more information see the [LICENSE.AGPL.txt] or [LICENSE.BSD.txt].
 
 Installing
 ==========
 
-tornado-restless was developed under python3.3, sqlalchemy0.8 and tornado3.0
-
-It may work with previous python3.X versions and sqlalchemy 2.7 (and maybe even with python2.7) but I did not test it at all.
+tornado-restless was developed under python3.3, sqlalchemy0.9 and tornado3.1
 
 To install this library as an egg use:
 

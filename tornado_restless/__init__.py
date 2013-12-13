@@ -9,4 +9,4 @@ __date__ = '29.04.13 - 15:37'
 from .api import ApiManager
 
 __all__ = ['ApiManager']
-__version__ = '0.3.2'
+__version__ = '0.4.0'

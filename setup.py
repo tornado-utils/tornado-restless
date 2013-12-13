@@ -10,12 +10,12 @@ from setuptools import setup
 
 setup(
     name='Tornado-Restless',
-    version='0.3.2',
+    version='0.4.0',
     author='Martin Martimeo',
     author_email='martin@martimeo.de',
     url='https://github.com/MartinMartimeo/tornado-restless',
     packages=['tornado_restless'],
-    license='GNU AGPLv3+',
+    license='GNU AGPLv3+ or BSD-3-clause',
     platforms='any',
     description='flask-restless adopted for tornado',
     long_description=open('README.md').read(),
@@ -27,6 +27,7 @@ setup(
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
+        'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
