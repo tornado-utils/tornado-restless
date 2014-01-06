@@ -7,10 +7,11 @@ __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '29.04.13 - 15:34'
 
 from setuptools import setup
+from tornado_restless import __version__
 
 setup(
     name='Tornado-Restless',
-    version='0.4.0',
+    version=__version__,
     author='Martin Martimeo',
     author_email='martin@martimeo.de',
     url='https://github.com/MartinMartimeo/tornado-restless',
