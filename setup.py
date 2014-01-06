@@ -14,7 +14,7 @@ setup(
     version=__version__,
     author='Martin Martimeo',
     author_email='martin@martimeo.de',
-    url='https://github.com/MartinMartimeo/tornado-restless',
+    url='https://github.com/tornado-utils/tornado-restless',
     packages=['tornado_restless'],
     license='GNU AGPLv3+ or BSD-3-clause',
     platforms='any',
