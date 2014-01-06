@@ -19,6 +19,17 @@ class IllegalArgumentError(ValueError, HTTPError):
         HTTPError.__init__(self, status_code, log_message, *args, **kwargs)
 
 
+class ProcessingException(HTTPError):
+    """
+        Raised when a pre or postprocessors encouters a problem.
+
+        No more processing will be done and the processing of the query is halted
+    """
+
+    def __init__(self, log_message, status_code=400, *args, **kwargs):
+        HTTPError.__init__(self, status_code, log_message, *args, **kwargs)
+
+
 class DictConvertionError(HTTPError):
     """
         Raised from convert.to_dict when it can't convert an instance to plain dict

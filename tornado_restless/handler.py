@@ -21,8 +21,9 @@ from sqlalchemy.util import memoized_instancemethod, memoized_property
 from tornado.web import RequestHandler, HTTPError
 
 from .convert import to_dict, to_filter
-from .errors import IllegalArgumentError, MethodNotAllowedError
+from .errors import IllegalArgumentError, MethodNotAllowedError, ProcessingException
 from .wrapper import SessionedModelWrapper
+
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '26.04.13 - 22:09'
@@ -162,15 +163,16 @@ class BaseHandler(RequestHandler):
 
             SQLAlchemyError will be encoded as 400 / SQLAlchemy: Bad Request
             Errors from the restless api as 400 / Restless: Bad Arguments
+            ProcessingException will be encoded with status code / ProcessingException: Stopped Processing
             Any other exceptions will occur as an 500 exception
 
             :param status_code: The Status Code in Response
             :param kwargs: Additional Parameters
         """
-
         if 'exc_info' in kwargs:
             exc_type, exc_value = kwargs['exc_info'][:2]
-            print_exception(*kwargs['exc_info'])
+            if status_code >= 300:
+                print_exception(*kwargs['exc_info'])
             if issubclass(exc_type, UnmappedInstanceError):
                 self.set_status(400, reason='SQLAlchemy: Unmapped Instance')
                 self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
@@ -181,6 +183,11 @@ class BaseHandler(RequestHandler):
                                  message="%s" % exc_value))
             elif issubclass(exc_type, IllegalArgumentError):
                 self.set_status(400, reason='Restless: Bad Arguments')
+                self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
+                                 message="%s" % exc_value))
+            elif issubclass(exc_type, ProcessingException):
+                self.set_status(status_code,
+                                reason='ProcessingException: %s' % (exc_value.reason or "Stopped Processing"))
                 self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
                                  message="%s" % exc_value))
             elif issubclass(exc_type, HTTPError) and exc_value.reason:
@@ -681,7 +688,6 @@ class BaseHandler(RequestHandler):
         instance = self.model.get(instance_id)
 
         # To Dict
-        logging.error(self.to_dict(instance))
         return self.to_dict(instance)
 
     def get_many(self) -> dict:
