@@ -1,0 +1,875 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tornado_restless.handler &mdash; Tornado Restless 0.3.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.3.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Tornado Restless 0.3.2 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for tornado_restless.handler</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/python</span>
+<span class="c"># -*- encoding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Tornado Restless BaseHandler</span>
+
+<span class="sd">    Handles all registered blueprints, you may override this class and</span>
+<span class="sd">     use the modification via create_api_blueprint(handler_class=...)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">from</span> <span class="nn">json</span> <span class="kn">import</span> <span class="n">loads</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">ceil</span>
+<span class="kn">from</span> <span class="nn">traceback</span> <span class="kn">import</span> <span class="n">print_exception</span>
+<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">parse_qs</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">SQLAlchemyError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm.exc</span> <span class="kn">import</span> <span class="n">UnmappedInstanceError</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.util</span> <span class="kn">import</span> <span class="n">memoized_instancemethod</span><span class="p">,</span> <span class="n">memoized_property</span>
+<span class="kn">from</span> <span class="nn">tornado.web</span> <span class="kn">import</span> <span class="n">RequestHandler</span><span class="p">,</span> <span class="n">HTTPError</span>
+
+<span class="kn">from</span> <span class="nn">.convert</span> <span class="kn">import</span> <span class="n">to_dict</span><span class="p">,</span> <span class="n">to_filter</span>
+<span class="kn">from</span> <span class="nn">.errors</span> <span class="kn">import</span> <span class="n">IllegalArgumentError</span><span class="p">,</span> <span class="n">MethodNotAllowedError</span><span class="p">,</span> <span class="n">ProcessingException</span>
+<span class="kn">from</span> <span class="nn">.wrapper</span> <span class="kn">import</span> <span class="n">SessionedModelWrapper</span>
+
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;Martin Martimeo &lt;martin@martimeo.de&gt;&#39;</span>
+<span class="n">__date__</span> <span class="o">=</span> <span class="s">&#39;26.04.13 - 22:09&#39;</span>
+
+
+<div class="viewcode-block" id="BaseHandler"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler">[docs]</a><span class="k">class</span> <span class="nc">BaseHandler</span><span class="p">(</span><span class="n">RequestHandler</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Basic Blueprint for a sqlalchemy model</span>
+
+<span class="sd">        Subclass of :class:`tornado.web.RequestHandler` that handles web requests.</span>
+
+<span class="sd">        Overwrite :func:`get() &lt;get&gt;` / :func:`post() &lt;post&gt;` / :func:`put() &lt;put&gt;` /</span>
+<span class="sd">        :func:`patch() &lt;patch&gt;` / :func:`delete() &lt;delete&gt;` if you want complete customize handling of the methods.</span>
+<span class="sd">        Note that the default implementation of this function check for the allowness and then call depending on</span>
+<span class="sd">        the instance_id parameter the associated _single / _many method, so you probably want to call super()</span>
+
+<span class="sd">        If you just want to customize the handling of the methods overwrite method_single or method_many.</span>
+
+<span class="sd">        If you want completly disable a method overwrite the SUPPORTED_METHODS constant</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">SUPPORTED_METHODS</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;GET&#39;</span><span class="p">,</span> <span class="s">&#39;POST&#39;</span><span class="p">,</span> <span class="s">&#39;PUT&#39;</span><span class="p">,</span> <span class="s">&#39;PATCH&#39;</span><span class="p">,</span> <span class="s">&#39;DELETE&#39;</span><span class="p">]</span>
+
+    <span class="c"># noinspection PyMethodOverriding</span>
+<div class="viewcode-block" id="BaseHandler.initialize"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">model</span><span class="p">,</span>
+                   <span class="n">manager</span><span class="p">,</span>
+                   <span class="n">methods</span><span class="p">:</span> <span class="nb">set</span><span class="p">,</span>
+                   <span class="n">preprocessor</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                   <span class="n">postprocessor</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                   <span class="n">allow_patch_many</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                   <span class="n">allow_method_override</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                   <span class="n">validation_exceptions</span><span class="p">,</span>
+                   <span class="n">include_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                   <span class="n">exclude_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                   <span class="n">results_per_page</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                   <span class="n">max_results_per_page</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Init of the handler, derives arguments from api create_api_blueprint</span>
+
+<span class="sd">        :param model: The sqlalchemy model</span>
+<span class="sd">        :param manager: The tornado_restless Api Manager</span>
+<span class="sd">        :param methods: Allowed methods for this model</span>
+<span class="sd">        :param preprocessor: A dictionary of preprocessor functions</span>
+<span class="sd">        :param postprocessor: A dictionary of postprocessor functions</span>
+<span class="sd">        :param allow_patch_many: Allow PATCH with multiple datasets</span>
+<span class="sd">        :param allow_method_override: Support X-HTTP-Method-Override Header</span>
+<span class="sd">        :param validation_exceptions:</span>
+<span class="sd">        :param include_columns: Whitelist of columns to be included</span>
+<span class="sd">        :param exclude_columns: Blacklist of columns to be excluded</span>
+<span class="sd">        :param results_per_page: The default value of how many results are returned per request</span>
+<span class="sd">        :param max_results_per_page: The hard upper limit of resutest per page</span>
+
+<span class="sd">        :reqheader X-HTTP-Method-Override: If allow_method_override is True, this header overwrites the request method</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Override Method if Header provided</span>
+        <span class="k">if</span> <span class="n">allow_method_override</span> <span class="ow">and</span> <span class="s">&#39;X-HTTP-Method-Override&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s">&#39;X-HTTP-Method-Override&#39;</span><span class="p">]</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">initialize</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">SessionedModelWrapper</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">manager</span><span class="o">.</span><span class="n">session_maker</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">methods</span> <span class="o">=</span> <span class="p">[</span><span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">methods</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allow_patch_many</span> <span class="o">=</span> <span class="n">allow_patch_many</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validation_exceptions</span> <span class="o">=</span> <span class="n">validation_exceptions</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">preprocessor</span> <span class="o">=</span> <span class="n">preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">postprocessor</span> <span class="o">=</span> <span class="n">postprocessor</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">results_per_page</span> <span class="o">=</span> <span class="n">results_per_page</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_results_per_page</span> <span class="o">=</span> <span class="n">max_results_per_page</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">include</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_columns</span><span class="p">(</span><span class="n">include_columns</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exclude</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parse_columns</span><span class="p">(</span><span class="n">exclude_columns</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">prepare</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Prepare the request</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">on_finish</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Finish the request</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_postprocessor</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">parse_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">strings</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Parse a list of column names (name1, name2, relation.name1, ...)</span>
+
+<span class="sd">            :param strings: List of Column Names</span>
+<span class="sd">            :return:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c"># Strings</span>
+        <span class="k">if</span> <span class="n">strings</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="c"># Parse</span>
+        <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="p">[</span><span class="n">column</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">strings</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">columns</span><span class="p">[</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">columns</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">column</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c"># Now parse relations</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span> <span class="ow">in</span> <span class="n">columns</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">columns</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parse_columns</span><span class="p">(</span><span class="n">strings</span><span class="p">)</span> <span class="k">for</span> <span class="n">strings</span> <span class="ow">in</span> <span class="n">item</span><span class="p">)</span>
+
+        <span class="c"># Return</span>
+        <span class="k">return</span> <span class="n">columns</span>
+
+    <span class="k">def</span> <span class="nf">get_filters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Returns a list of filters made by the query argument</span>
+
+<span class="sd">            :query filters: list of filters</span>
+<span class="sd">            :query order_by: list of orderings</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Get all provided filters</span>
+        <span class="n">argument_filters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_argument</span><span class="p">(</span><span class="s">&quot;filters&quot;</span><span class="p">,</span> <span class="p">[])</span>
+
+        <span class="c"># Get all provided orders</span>
+        <span class="n">argument_orders</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_argument</span><span class="p">(</span><span class="s">&quot;order_by&quot;</span><span class="p">,</span> <span class="p">[])</span>
+
+        <span class="k">return</span> <span class="n">to_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">argument_filters</span><span class="p">,</span> <span class="n">argument_orders</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">status_code</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Encodes any exceptions thrown to json</span>
+
+<span class="sd">            SQLAlchemyError will be encoded as 400 / SQLAlchemy: Bad Request</span>
+<span class="sd">            Errors from the restless api as 400 / Restless: Bad Arguments</span>
+<span class="sd">            ProcessingException will be encoded with status code / ProcessingException: Stopped Processing</span>
+<span class="sd">            Any other exceptions will occur as an 500 exception</span>
+
+<span class="sd">            :param status_code: The Status Code in Response</span>
+<span class="sd">            :param kwargs: Additional Parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s">&#39;exc_info&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;exc_info&#39;</span><span class="p">][:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">300</span><span class="p">:</span>
+                <span class="n">print_exception</span><span class="p">(</span><span class="o">*</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;exc_info&#39;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">exc_type</span><span class="p">,</span> <span class="n">UnmappedInstanceError</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s">&#39;SQLAlchemy: Unmapped Instance&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">exc_type</span><span class="o">.</span><span class="n">__module__</span> <span class="o">+</span> <span class="s">&quot;.&quot;</span> <span class="o">+</span> <span class="n">exc_type</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                                 <span class="n">message</span><span class="o">=</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">exc_value</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">exc_type</span><span class="p">,</span> <span class="n">SQLAlchemyError</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s">&#39;SQLAlchemy: Bad Request&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">exc_type</span><span class="o">.</span><span class="n">__module__</span> <span class="o">+</span> <span class="s">&quot;.&quot;</span> <span class="o">+</span> <span class="n">exc_type</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                                 <span class="n">message</span><span class="o">=</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">exc_value</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">exc_type</span><span class="p">,</span> <span class="n">IllegalArgumentError</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s">&#39;Restless: Bad Arguments&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">exc_type</span><span class="o">.</span><span class="n">__module__</span> <span class="o">+</span> <span class="s">&quot;.&quot;</span> <span class="o">+</span> <span class="n">exc_type</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                                 <span class="n">message</span><span class="o">=</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">exc_value</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">exc_type</span><span class="p">,</span> <span class="n">ProcessingException</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="n">status_code</span><span class="p">,</span>
+                                <span class="n">reason</span><span class="o">=</span><span class="s">&#39;ProcessingException: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">exc_value</span><span class="o">.</span><span class="n">reason</span> <span class="ow">or</span> <span class="s">&quot;Stopped Processing&quot;</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">exc_type</span><span class="o">.</span><span class="n">__module__</span> <span class="o">+</span> <span class="s">&quot;.&quot;</span> <span class="o">+</span> <span class="n">exc_type</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                                 <span class="n">message</span><span class="o">=</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">exc_value</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">exc_type</span><span class="p">,</span> <span class="n">HTTPError</span><span class="p">)</span> <span class="ow">and</span> <span class="n">exc_value</span><span class="o">.</span><span class="n">reason</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="n">status_code</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="n">exc_value</span><span class="o">.</span><span class="n">reason</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">exc_type</span><span class="o">.</span><span class="n">__module__</span> <span class="o">+</span> <span class="s">&quot;.&quot;</span> <span class="o">+</span> <span class="n">exc_type</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                                 <span class="n">message</span><span class="o">=</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">exc_value</span><span class="p">,</span> <span class="o">**</span><span class="n">exc_value</span><span class="o">.</span><span class="n">__dict__</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">write_error</span><span class="p">(</span><span class="n">status_code</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">write_error</span><span class="p">(</span><span class="n">status_code</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<div class="viewcode-block" id="BaseHandler.patch"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.patch">[docs]</a>    <span class="k">def</span> <span class="nf">patch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance_id</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            PATCH (update instance) request</span>
+
+<span class="sd">            :param instance_id: query argument of request</span>
+<span class="sd">            :type instance_id: comma seperated string list</span>
+
+<span class="sd">            :statuscode 403: PATCH MANY disallowed</span>
+<span class="sd">            :statuscode 405: PATCH disallowed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;patch&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">methods</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MethodNotAllowedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">search_params</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">search_params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">instance_id</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_patch_many</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">patch_many</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MethodNotAllowedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">403</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">patch_single</span><span class="p">(</span><span class="n">instance_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;,&quot;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_postprocessor</span><span class="p">(</span><span class="n">result</span><span class="o">=</span><span class="n">result</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="BaseHandler.patch_many"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.patch_many">[docs]</a>    <span class="k">def</span> <span class="nf">patch_many</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Patch many instances</span>
+
+<span class="sd">            :statuscode 201: instances successfull modified</span>
+
+<span class="sd">            :query limit: limit the count of modified instances</span>
+<span class="sd">            :query single: If true sqlalchemy will raise an error if zero or more than one instances would be modified</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Flush</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+        <span class="c"># Get values</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_argument_values</span><span class="p">()</span>
+
+        <span class="c"># Filters</span>
+        <span class="n">filters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_filters</span><span class="p">()</span>
+
+        <span class="c"># Limit</span>
+        <span class="n">limit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_argument</span><span class="p">(</span><span class="s">&quot;limit&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+        <span class="c"># Call Preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">values</span><span class="p">)</span>
+
+        <span class="c"># Modify Instances</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_argument</span><span class="p">(</span><span class="s">&quot;single&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">):</span>
+            <span class="n">instances</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">one</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">instances</span><span class="p">:</span>
+                <span class="k">for</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s"> =&gt; </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+
+        <span class="c"># Commit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+        <span class="c"># Result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="mi">201</span><span class="p">,</span> <span class="s">&quot;Patched&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;num_modified&#39;</span><span class="p">:</span> <span class="n">num</span><span class="p">}</span>
+</div>
+<div class="viewcode-block" id="BaseHandler.patch_single"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.patch_single">[docs]</a>    <span class="k">def</span> <span class="nf">patch_single</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance_id</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Patch one instance</span>
+
+<span class="sd">            :param instance_id: query argument of request</span>
+<span class="sd">            :type instance_id: list of primary keys</span>
+
+<span class="sd">            :statuscode 201: instance successfull modified</span>
+<span class="sd">            :statuscode 404: Error</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">begin_nested</span><span class="p">():</span>
+                <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_argument_values</span><span class="p">()</span>
+
+                <span class="c"># Call Preprocessor</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">instance_id</span><span class="o">=</span><span class="n">instance_id</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">values</span><span class="p">)</span>
+
+                <span class="c"># Get Instance</span>
+                <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">instance_id</span><span class="p">)</span>
+
+                <span class="c"># Set Values</span>
+                <span class="k">for</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%r</span><span class="s">.</span><span class="si">%s</span><span class="s"> =&gt; </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+                <span class="c"># Flush</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+                <span class="k">except</span> <span class="n">SQLAlchemyError</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">send_error</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">())</span>
+                    <span class="k">return</span>
+
+                <span class="c"># Refresh</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">refresh</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+
+                <span class="c"># Set Status</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="mi">201</span><span class="p">,</span> <span class="s">&quot;Patched&quot;</span><span class="p">)</span>
+
+                <span class="c"># To Dict</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">SQLAlchemyError</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_error</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">())</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="c"># Commit</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="BaseHandler.delete"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.delete">[docs]</a>    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance_id</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            DELETE (delete instance) request</span>
+
+<span class="sd">            :param instance_id: query argument of request</span>
+<span class="sd">            :type instance_id: comma seperated string list</span>
+
+<span class="sd">            :statuscode 403: DELETE MANY disallowed</span>
+<span class="sd">            :statuscode 405: DELETE disallowed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;delete&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">methods</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MethodNotAllowedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">)</span>
+
+        <span class="c"># Call Preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">search_params</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">search_params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">instance_id</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_patch_many</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_many</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MethodNotAllowedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">403</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_single</span><span class="p">(</span><span class="n">instance_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;,&quot;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_postprocessor</span><span class="p">(</span><span class="n">result</span><span class="o">=</span><span class="n">result</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="BaseHandler.delete_many"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.delete_many">[docs]</a>    <span class="k">def</span> <span class="nf">delete_many</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Remove many instances</span>
+
+<span class="sd">            :statuscode 200: instances successfull removed</span>
+
+<span class="sd">            :query limit: limit the count of deleted instances</span>
+<span class="sd">            :query single: If true sqlalchemy will raise an error if zero or more than one instances would be deleted</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Flush</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+        <span class="c"># Filters</span>
+        <span class="n">filters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_filters</span><span class="p">()</span>
+
+        <span class="c"># Limit</span>
+        <span class="n">limit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_argument</span><span class="p">(</span><span class="s">&quot;limit&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+        <span class="c"># Call Preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+
+        <span class="c"># Modify Instances</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_argument</span><span class="p">(</span><span class="s">&quot;single&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">):</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">one</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+
+        <span class="c"># Commit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+        <span class="c"># Result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="s">&quot;Removed&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;num_removed&#39;</span><span class="p">:</span> <span class="n">num</span><span class="p">}</span>
+</div>
+<div class="viewcode-block" id="BaseHandler.delete_single"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.delete_single">[docs]</a>    <span class="k">def</span> <span class="nf">delete_single</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance_id</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Get one instance</span>
+
+<span class="sd">            :param instance_id: query argument of request</span>
+<span class="sd">            :type instance_id: list of primary keys</span>
+
+<span class="sd">            :statuscode 204: instance successfull removed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Call Preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">instance_id</span><span class="o">=</span><span class="n">instance_id</span><span class="p">)</span>
+
+        <span class="c"># Get Instance</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">instance_id</span><span class="p">)</span>
+
+        <span class="c"># Trigger deletion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+        <span class="c"># Status</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="mi">204</span><span class="p">,</span> <span class="s">&quot;Instance removed&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{}</span>
+</div>
+<div class="viewcode-block" id="BaseHandler.put"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.put">[docs]</a>    <span class="k">def</span> <span class="nf">put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance_id</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            PUT (update instance) request</span>
+
+<span class="sd">            :param instance_id: query argument of request</span>
+<span class="sd">            :type instance_id: comma seperated string list</span>
+
+<span class="sd">            :statuscode 403: PUT MANY disallowed</span>
+<span class="sd">            :statuscode 404: Error</span>
+<span class="sd">            :statuscode 405: PUT disallowed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;put&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">methods</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MethodNotAllowedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">)</span>
+
+        <span class="c"># Call Preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">search_params</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">search_params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">instance_id</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_patch_many</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">put_many</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MethodNotAllowedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">,</span> <span class="n">status_code</span><span class="o">=</span><span class="mi">403</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">put_single</span><span class="p">(</span><span class="n">instance_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;,&quot;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_postprocessor</span><span class="p">(</span><span class="n">result</span><span class="o">=</span><span class="n">result</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</div>
+    <span class="n">put_many</span> <span class="o">=</span> <span class="n">patch_many</span>
+    <span class="n">put_single</span> <span class="o">=</span> <span class="n">patch_single</span>
+
+<div class="viewcode-block" id="BaseHandler.post"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.post">[docs]</a>    <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance_id</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            POST (new input) request</span>
+
+<span class="sd">            :param instance_id: (ignored)</span>
+
+<span class="sd">            :statuscode 204: instance successfull created</span>
+<span class="sd">            :statuscode 404: Error</span>
+<span class="sd">            :statuscode 405: POST disallowed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;post&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">methods</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MethodNotAllowedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">)</span>
+
+        <span class="c"># Call Preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">search_params</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">search_params</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">post_single</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_postprocessor</span><span class="p">(</span><span class="n">result</span><span class="o">=</span><span class="n">result</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">post_single</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Post one instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_argument_values</span><span class="p">()</span>
+
+            <span class="c"># Call Preprocessor</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">values</span><span class="p">)</span>
+
+            <span class="c"># Create Instance</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="o">**</span><span class="n">values</span><span class="p">)</span>
+
+            <span class="c"># Flush</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+            <span class="c"># Refresh</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">refresh</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+
+            <span class="c"># Set Status</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="mi">201</span><span class="p">,</span> <span class="s">&quot;Created&quot;</span><span class="p">)</span>
+
+            <span class="c"># To Dict</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">SQLAlchemyError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_error</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">rollback</span><span class="p">()</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="c"># Commit</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+    <span class="nd">@memoized_instancemethod</span>
+    <span class="k">def</span> <span class="nf">get_content_encoding</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the encoding the client sends us for encoding request.body correctly</span>
+
+<span class="sd">        :reqheader Content-Type: Provide a charset in addition for decoding arguments.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">content_type_args</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">parse_qs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s">&#39;Content-Type&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="k">if</span> <span class="s">&#39;charset&#39;</span> <span class="ow">in</span> <span class="n">content_type_args</span> <span class="ow">and</span> <span class="n">content_type_args</span><span class="p">[</span><span class="s">&#39;charset&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="n">content_type_args</span><span class="p">[</span><span class="s">&#39;charset&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;latin1&#39;</span>
+
+    <span class="nd">@memoized_instancemethod</span>
+    <span class="k">def</span> <span class="nf">get_body_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Get arguments encode as json body</span>
+
+<span class="sd">            :statuscode 415: Content-Type mismatch</span>
+
+<span class="sd">            :reqheader Content-Type: application/x-www-form-urlencoded or application/json</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+
+        <span class="n">content_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;Content-Type&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s">&#39;www-form-urlencoded&#39;</span> <span class="ow">in</span> <span class="n">content_type</span><span class="p">:</span>
+            <span class="n">payload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">arguments</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">payload</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">payload</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">payload</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_content_encoding</span><span class="p">())</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">payload</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_content_encoding</span><span class="p">())</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">payload</span>
+        <span class="k">elif</span> <span class="s">&#39;application/json&#39;</span> <span class="ow">in</span> <span class="n">content_type</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">loads</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_content_encoding</span><span class="p">()))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">HTTPError</span><span class="p">(</span><span class="mi">415</span><span class="p">,</span> <span class="n">content_type</span><span class="o">=</span><span class="n">content_type</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_body_argument</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">RequestHandler</span><span class="o">.</span><span class="n">_ARG_DEFAULT</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get an argument named key from json encoded body</span>
+
+<span class="sd">        :param name: Name of argument</span>
+<span class="sd">        :param default: Default value, if not provided HTTPError 404 is raised</span>
+<span class="sd">        :return:</span>
+
+<span class="sd">        :statuscode 404: Missing Argument</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">arguments</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_body_arguments</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">arguments</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">arguments</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">default</span> <span class="ow">is</span> <span class="n">RequestHandler</span><span class="o">.</span><span class="n">_ARG_DEFAULT</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">HTTPError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&quot;Missing argument </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">default</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">search_params</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            The &#39;q&#39; Dictionary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_search_params</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_search_params</span> <span class="o">=</span> <span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_argument</span><span class="p">(</span><span class="s">&quot;q&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s">&quot;{}&quot;</span><span class="p">))</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_search_params</span>
+
+    <span class="k">def</span> <span class="nf">get_query_argument</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">RequestHandler</span><span class="o">.</span><span class="n">_ARG_DEFAULT</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get an argument named key from json encoded body</span>
+
+<span class="sd">        :param name:</span>
+<span class="sd">        :param default:</span>
+<span class="sd">        :return:</span>
+<span class="sd">        :raise: 400 Missing Argument</span>
+
+<span class="sd">        :query q: The query argument</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_params</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_params</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">default</span> <span class="ow">is</span> <span class="n">RequestHandler</span><span class="o">.</span><span class="n">_ARG_DEFAULT</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">HTTPError</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="s">&quot;Missing argument </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">default</span>
+
+    <span class="k">def</span> <span class="nf">get_argument</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            On PUT/PATCH many request parameter may be located in body instead of query</span>
+
+<span class="sd">            :param name: Name of argument</span>
+<span class="sd">            :param args: Additional position arguments @see tornado.web.RequestHandler.get_argument</span>
+<span class="sd">            :param kwargs: Additional keyword arguments @see tornado.web.RequestHandler.get_argument</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">get_argument</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">HTTPError</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&quot;q&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;PUT&#39;</span><span class="p">,</span> <span class="s">&#39;PATCH&#39;</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_body_argument</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span>
+
+    <span class="k">def</span> <span class="nf">get_argument_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Get all values provided via arguments</span>
+
+<span class="sd">            :query q: (ignored)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Include Columns</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">include</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_body_argument</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_body_arguments</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+        <span class="c"># Exclude &quot;q&quot;</span>
+        <span class="k">if</span> <span class="s">&quot;q&quot;</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">values</span><span class="p">[</span><span class="s">&quot;q&quot;</span><span class="p">]</span>
+
+        <span class="c"># Exclude Columns</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exclude</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exclude</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                    <span class="k">del</span> <span class="n">values</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
+
+        <span class="c"># Silently Ignore proxies</span>
+        <span class="k">for</span> <span class="n">proxy</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">proxies</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">proxy</span><span class="o">.</span><span class="n">key</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Skipping proxy: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">proxy</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">del</span> <span class="n">values</span><span class="p">[</span><span class="n">proxy</span><span class="o">.</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="c"># Silently Ignore hybrids</span>
+        <span class="k">for</span> <span class="n">hybrid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">hybrids</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">hybrid</span><span class="o">.</span><span class="n">key</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Skipping hybrid: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">hybrid</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">del</span> <span class="n">values</span><span class="p">[</span><span class="n">hybrid</span><span class="o">.</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="c"># Handle Relations extra</span>
+        <span class="n">values_relations</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">relation_key</span><span class="p">,</span> <span class="n">relation</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">relations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">relation_key</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                <span class="n">values_relations</span><span class="p">[</span><span class="n">relation_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">relation_key</span><span class="p">]</span>
+                <span class="k">del</span> <span class="n">values</span><span class="p">[</span><span class="n">relation_key</span><span class="p">]</span>
+
+        <span class="c"># Check Columns</span>
+        <span class="c">#for column in values:</span>
+        <span class="c">#    if not column in self.model.column_names:</span>
+        <span class="c">#        raise IllegalArgumentError(&quot;Column &#39;%s&#39; not defined for model %s&quot; % (column, self.model.model))</span>
+
+        <span class="k">return</span> <span class="n">values</span>
+
+<div class="viewcode-block" id="BaseHandler.get"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance_id</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            GET request</span>
+
+<span class="sd">            :param instance_id: query argument of request</span>
+<span class="sd">            :type instance_id: comma seperated string list</span>
+
+<span class="sd">            :statuscode 405: GET disallowed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;get&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">methods</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">MethodNotAllowedError</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">)</span>
+
+        <span class="c"># Call Preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">search_params</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">search_params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">instance_id</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_many</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_single</span><span class="p">(</span><span class="n">instance_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;,&quot;</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_postprocessor</span><span class="p">(</span><span class="n">result</span><span class="o">=</span><span class="n">result</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finish</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="BaseHandler.get_single"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.get_single">[docs]</a>    <span class="k">def</span> <span class="nf">get_single</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance_id</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Get one instance</span>
+
+<span class="sd">            :param instance_id: query argument of request</span>
+<span class="sd">            :type instance_id: list of primary keys</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Call Preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">instance_id</span><span class="o">=</span><span class="n">instance_id</span><span class="p">)</span>
+
+        <span class="c"># Get Instance</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">instance_id</span><span class="p">)</span>
+
+        <span class="c"># To Dict</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="BaseHandler.get_many"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.get_many">[docs]</a>    <span class="k">def</span> <span class="nf">get_many</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Get all instances</span>
+
+<span class="sd">            Note that it is possible to provide offset and page as argument then</span>
+<span class="sd">            it will return instances of the nth page and skip offset items</span>
+
+<span class="sd">            :statuscode 400: if results_per_page &gt; max_results_per_page or offset &lt; 0</span>
+
+<span class="sd">            :query results_per_page: Overwrite the returned results_per_page</span>
+<span class="sd">            :query offset: Skip offset instances</span>
+<span class="sd">            :query page: Return nth page</span>
+<span class="sd">            :query limit: limit the count of modified instances</span>
+<span class="sd">            :query single: If true sqlalchemy will raise an error if zero or more than one instances would be deleted</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># Results per Page</span>
+        <span class="n">results_per_page</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_argument</span><span class="p">(</span><span class="s">&quot;results_per_page&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_per_page</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">results_per_page</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_results_per_page</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IllegalArgumentError</span><span class="p">(</span><span class="s">&quot;request.results_per_page &gt; application.max_results_per_page&quot;</span><span class="p">)</span>
+
+        <span class="c"># Offset &amp; Page</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_query_argument</span><span class="p">(</span><span class="s">&quot;offset&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">page</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_argument</span><span class="p">(</span><span class="s">&quot;page&quot;</span><span class="p">,</span> <span class="s">&#39;1&#39;</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">page</span> <span class="o">*</span> <span class="n">results_per_page</span>
+        <span class="k">if</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IllegalArgumentError</span><span class="p">(</span><span class="s">&quot;request.offset &lt; 0&quot;</span><span class="p">)</span>
+
+        <span class="c"># Filters</span>
+        <span class="n">filters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_filters</span><span class="p">()</span>
+
+        <span class="c"># Call Preprocessor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_call_preprocessor</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+
+        <span class="c"># Limit</span>
+        <span class="n">limit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_argument</span><span class="p">(</span><span class="s">&quot;limit&quot;</span><span class="p">,</span> <span class="n">results_per_page</span> <span class="k">if</span> <span class="n">results_per_page</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="bp">None</span><span class="p">)</span>
+
+        <span class="c"># Num Results</span>
+        <span class="n">num_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">results_per_page</span><span class="p">:</span>
+            <span class="n">total_pages</span> <span class="o">=</span> <span class="n">ceil</span><span class="p">(</span><span class="n">num_results</span> <span class="o">/</span> <span class="n">results_per_page</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">total_pages</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c"># Get Instances</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_query_argument</span><span class="p">(</span><span class="s">&quot;single&quot;</span><span class="p">,</span> <span class="bp">False</span><span class="p">):</span>
+            <span class="n">instances</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">one</span><span class="p">(</span><span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">instances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;num_results&#39;</span><span class="p">:</span> <span class="n">num_results</span><span class="p">,</span>
+                <span class="s">&quot;total_pages&quot;</span><span class="p">:</span> <span class="n">total_pages</span><span class="p">,</span>
+                <span class="s">&quot;page&quot;</span><span class="p">:</span> <span class="n">page</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s">&quot;objects&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">instances</span><span class="p">)}</span>
+</div>
+    <span class="k">def</span> <span class="nf">_call_preprocessor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Calls a preprocessor with args and kwargs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">func_name</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()[</span><span class="mi">1</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">func_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">preprocessor</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">preprocessor</span><span class="p">[</span><span class="n">func_name</span><span class="p">]:</span>
+                <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_call_postprocessor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Calls a postprocessor with args and kwargs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">func_name</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()[</span><span class="mi">1</span><span class="p">][</span><span class="mi">3</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">func_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">postprocessor</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">func</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">postprocessor</span><span class="p">[</span><span class="n">func_name</span><span class="p">]:</span>
+                <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="nd">@memoized_property</span>
+<div class="viewcode-block" id="BaseHandler.logger"><a class="viewcode-back" href="../../api/handler.html#tornado_restless.handler.BaseHandler.logger">[docs]</a>    <span class="k">def</span> <span class="nf">logger</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Tornado Restless Logger</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;tornado.restless&#39;</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Wrapper to convert.to_dict with arguments from blueprint init</span>
+
+<span class="sd">            :param instance: Instance to be translated</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">to_dict</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span>
+                       <span class="n">include</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">,</span>
+                       <span class="n">exclude</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">exclude</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Martin Martimeo et. al..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

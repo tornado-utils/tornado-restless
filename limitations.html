@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>limitations – Limitations and Differences &mdash; Tornado Restless 0.3.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.3.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Tornado Restless 0.3.2 documentation" href="index.html" />
+    <link rel="next" title="license – License" href="license.html" />
+    <link rel="prev" title="tornado_restless.wrapper – ModelWrapper" href="api/wrapper.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="license.html" title="license – License"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="api/wrapper.html" title="tornado_restless.wrapper – ModelWrapper"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <span class="target" id="module-limitations"></span><div class="section" id="limitations-limitations-and-differences">
+<h1><a class="reference internal" href="#module-limitations" title="limitations"><tt class="xref py py-mod docutils literal"><span class="pre">limitations</span></tt></a> &#8211; Limitations and Differences<a class="headerlink" href="#limitations-limitations-and-differences" title="Permalink to this headline">¶</a></h1>
+<p>Tornado Restless aims to be compilant with Flask-Restless but is currently still in development.
+Some of known major differences are:</p>
+<ul class="simple">
+<li>No support for flask-sqlalchemy</li>
+</ul>
+<p>Known differences that are planned to be supported in future:</p>
+<ul class="simple">
+<li>Capturing validation errors</li>
+<li>Request preprocessors and postprocessors (beside of extending the BaseHandler class for requests)</li>
+<li>Authentification support (beside of extending the BaseHandler class for request)</li>
+</ul>
+<p>Known differences that may be supported in future:</p>
+<ul class="simple">
+<li>allow_functions keyword is unsupported</li>
+<li>JSONP callback keyword is unsupported</li>
+</ul>
+<p>Minor differences:</p>
+<ul class="simple">
+<li>More operators are supported</li>
+<li>There are two differences <a class="reference external" href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.5">404 Not Found</a> Bad Arguments exceptions either from the restless engine or the sqlalchemy engine</li>
+<li>Data modification may be passed via <tt class="docutils literal"><span class="pre">Content-Type:</span> <span class="pre">application/x-www-url-encodeded</span></tt></li>
+<li>The method_single processors accepts a list of primary_keys as arguments in difference to flask-restless where only one primary key is allowed.</li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="api/wrapper.html"
+                        title="previous chapter"><tt class="docutils literal"><span class="pre">tornado_restless.wrapper</span></tt> &#8211; ModelWrapper</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="license.html"
+                        title="next chapter"><tt class="docutils literal"><span class="pre">license</span></tt> &#8211; License</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/limitations.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="license.html" title="license – License"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="api/wrapper.html" title="tornado_restless.wrapper – ModelWrapper"
+             >previous</a> |</li>
+        <li><a href="index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Martin Martimeo et. al..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

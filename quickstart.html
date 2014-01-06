@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>quickstart – Quickstart &mdash; Tornado Restless 0.3.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.3.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="Tornado Restless 0.3.2 documentation" href="index.html" />
+    <link rel="next" title="operators – Operators" href="searchformat/operators.html" />
+    <link rel="prev" title="toc.index – Tornado Restless" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="searchformat/operators.html" title="operators – Operators"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="toc.index – Tornado Restless"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <span class="target" id="module-quickstart"></span><div class="section" id="quickstart-quickstart">
+<h1><a class="reference internal" href="#module-quickstart" title="quickstart"><tt class="xref py py-mod docutils literal"><span class="pre">quickstart</span></tt></a> &#8211; Quickstart<a class="headerlink" href="#quickstart-quickstart" title="Permalink to this headline">¶</a></h1>
+<p>Tornado Restless creates for each sqlalchemy model an tornado URLSpec route that will handle request made to the model.
+The following example will create a tornado app, init sqlalchemy with a sqlite memory database and provide own route for the Person model on :8888/api/persons.:</p>
+<div class="highlight-python"><pre>import tornado.ioloop
+import tornado.web
+
+from sqlalchemy import create_engine, schema, Column
+from sqlalchemy.types import Integer, String
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+
+from tornado_restless import ApiManager
+
+# Init Tornado Application
+application = tornado.web.Application([])
+
+# Init SQLAlchemy
+engine = create_engine(&#x27;sqlite:///:memory:&#x27;)
+metadata = schema.MetaData()
+Session = sessionmaker(bind=engine)
+Base = declarative_base(metadata=metadata)
+session = Session()
+
+# Create some model
+class Person(Base):
+   _\_tablename__ = &#x27;persons&#x27;
+
+   id = Column(Integer, primary_key=True)
+   name = Column(String, unique=True)
+
+metadata.create_all(engine)
+
+# Create restless api handlers
+api = ApiManager(application=application, session_maker=Session)
+api.create_api(Person)
+
+if __name__ == &quot;__main__&quot;:
+   application.listen(8888)
+   tornado.ioloop.IOLoop.instance().start()</pre>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter"><tt class="docutils literal"><span class="pre">toc.index</span></tt> &#8211; Tornado Restless</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="searchformat/operators.html"
+                        title="next chapter"><tt class="docutils literal"><span class="pre">operators</span></tt> &#8211; Operators</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/quickstart.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="searchformat/operators.html" title="operators – Operators"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="toc.index – Tornado Restless"
+             >previous</a> |</li>
+        <li><a href="index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Martin Martimeo et. al..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

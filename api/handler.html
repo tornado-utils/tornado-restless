@@ -1,0 +1,370 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tornado_restless.handler – BaseHandler &mdash; Tornado Restless 0.3.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.3.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Tornado Restless 0.3.2 documentation" href="../index.html" />
+    <link rel="next" title="tornado_restless.wrapper – ModelWrapper" href="wrapper.html" />
+    <link rel="prev" title="tornado_restless.api – ApiManager" href="api.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="wrapper.html" title="tornado_restless.wrapper – ModelWrapper"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="tornado_restless.api – ApiManager"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <span class="target" id="module-tornado_restless.handler"></span><div class="section" id="tornado-restless-handler-basehandler">
+<h1><a class="reference internal" href="#module-tornado_restless.handler" title="tornado_restless.handler"><tt class="xref py py-mod docutils literal"><span class="pre">tornado_restless.handler</span></tt></a> &#8211; BaseHandler<a class="headerlink" href="#tornado-restless-handler-basehandler" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="tornado_restless.handler.BaseHandler">
+<em class="property">class </em><tt class="descclassname">tornado_restless.handler.</tt><tt class="descname">BaseHandler</tt><big>(</big><em>application</em>, <em>request</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Basic Blueprint for a sqlalchemy model</p>
+<p>Subclass of <tt class="xref py py-class docutils literal"><span class="pre">tornado.web.RequestHandler</span></tt> that handles web requests.</p>
+<p>Overwrite <a class="reference internal" href="#tornado_restless.handler.BaseHandler.get" title="tornado_restless.handler.BaseHandler.get"><tt class="xref py py-func docutils literal"><span class="pre">get()</span></tt></a> / <a class="reference internal" href="#tornado_restless.handler.BaseHandler.post" title="tornado_restless.handler.BaseHandler.post"><tt class="xref py py-func docutils literal"><span class="pre">post()</span></tt></a> / <a class="reference internal" href="#tornado_restless.handler.BaseHandler.put" title="tornado_restless.handler.BaseHandler.put"><tt class="xref py py-func docutils literal"><span class="pre">put()</span></tt></a> /
+<a class="reference internal" href="#tornado_restless.handler.BaseHandler.patch" title="tornado_restless.handler.BaseHandler.patch"><tt class="xref py py-func docutils literal"><span class="pre">patch()</span></tt></a> / <a class="reference internal" href="#tornado_restless.handler.BaseHandler.delete" title="tornado_restless.handler.BaseHandler.delete"><tt class="xref py py-func docutils literal"><span class="pre">delete()</span></tt></a> if you want complete customize handling of the methods.
+Note that the default implementation of this function check for the allowness and then call depending on
+the instance_id parameter the associated _single / _many method, so you probably want to call super()</p>
+<p>If you just want to customize the handling of the methods overwrite method_single or method_many.</p>
+<p>If you want completly disable a method overwrite the SUPPORTED_METHODS constant</p>
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.initialize">
+<tt class="descname">initialize</tt><big>(</big><em>model</em>, <em>manager</em>, <em>methods</em>, <em>preprocessor</em>, <em>postprocessor</em>, <em>allow_patch_many</em>, <em>allow_method_override</em>, <em>validation_exceptions</em>, <em>include_columns</em>, <em>exclude_columns</em>, <em>results_per_page</em>, <em>max_results_per_page</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.initialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Init of the handler, derives arguments from api create_api_blueprint</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>model</strong> &#8211; The sqlalchemy model</li>
+<li><strong>manager</strong> &#8211; The tornado_restless Api Manager</li>
+<li><strong>methods</strong> &#8211; Allowed methods for this model</li>
+<li><strong>preprocessor</strong> &#8211; A dictionary of preprocessor functions</li>
+<li><strong>postprocessor</strong> &#8211; A dictionary of postprocessor functions</li>
+<li><strong>allow_patch_many</strong> &#8211; Allow PATCH with multiple datasets</li>
+<li><strong>allow_method_override</strong> &#8211; Support X-HTTP-Method-Override Header</li>
+<li><strong>validation_exceptions</strong> &#8211; </li>
+<li><strong>include_columns</strong> &#8211; Whitelist of columns to be included</li>
+<li><strong>exclude_columns</strong> &#8211; Blacklist of columns to be excluded</li>
+<li><strong>results_per_page</strong> &#8211; The default value of how many results are returned per request</li>
+<li><strong>max_results_per_page</strong> &#8211; The hard upper limit of resutest per page</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Reqheader X-HTTP-Method-Override:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last">If allow_method_override is True, this header overwrites the request method</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.get">
+<tt class="descname">get</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>GET request</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>instance_id</strong> (<em>comma seperated string list</em>) &#8211; query argument of request</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Statuscode 405:</th><td class="field-body">GET disallowed</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.get_single">
+<tt class="descname">get_single</tt><big>(</big><em>instance_id</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.get_single"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.get_single" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get one instance</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>instance_id</strong> (<em>list of primary keys</em>) &#8211; query argument of request</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.get_many">
+<tt class="descname">get_many</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.get_many"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.get_many" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all instances</p>
+<p>Note that it is possible to provide offset and page as argument then
+it will return instances of the nth page and skip offset items</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Statuscode 400:</th><td class="field-body">if results_per_page &gt; max_results_per_page or offset &lt; 0</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">Query results_per_page:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">Overwrite the returned results_per_page</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Query offset:</th><td class="field-body">Skip offset instances</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Query page:</th><td class="field-body">Return nth page</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Query limit:</th><td class="field-body">limit the count of modified instances</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Query single:</th><td class="field-body">If true sqlalchemy will raise an error if zero or more than one instances would be deleted</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.post">
+<tt class="descname">post</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.post"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.post" title="Permalink to this definition">¶</a></dt>
+<dd><p>POST (new input) request</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>instance_id</strong> &#8211; (ignored)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Statuscode 204:</th><td class="field-body">instance successfull created</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Statuscode 404:</th><td class="field-body">Error</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Statuscode 405:</th><td class="field-body">POST disallowed</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.patch">
+<tt class="descname">patch</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.patch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.patch" title="Permalink to this definition">¶</a></dt>
+<dd><p>PATCH (update instance) request</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>instance_id</strong> (<em>comma seperated string list</em>) &#8211; query argument of request</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Statuscode 403:</th><td class="field-body">PATCH MANY disallowed</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Statuscode 405:</th><td class="field-body">PATCH disallowed</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.patch_single">
+<tt class="descname">patch_single</tt><big>(</big><em>instance_id</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.patch_single"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.patch_single" title="Permalink to this definition">¶</a></dt>
+<dd><p>Patch one instance</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>instance_id</strong> (<em>list of primary keys</em>) &#8211; query argument of request</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Statuscode 201:</th><td class="field-body">instance successfull modified</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Statuscode 404:</th><td class="field-body">Error</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.patch_many">
+<tt class="descname">patch_many</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.patch_many"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.patch_many" title="Permalink to this definition">¶</a></dt>
+<dd><p>Patch many instances</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Statuscode 201:</th><td class="field-body">instances successfull modified</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Query limit:</th><td class="field-body">limit the count of modified instances</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Query single:</th><td class="field-body">If true sqlalchemy will raise an error if zero or more than one instances would be modified</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.put">
+<tt class="descname">put</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.put"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.put" title="Permalink to this definition">¶</a></dt>
+<dd><p>PUT (update instance) request</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>instance_id</strong> (<em>comma seperated string list</em>) &#8211; query argument of request</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Statuscode 403:</th><td class="field-body">PUT MANY disallowed</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Statuscode 404:</th><td class="field-body">Error</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Statuscode 405:</th><td class="field-body">PUT disallowed</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.delete">
+<tt class="descname">delete</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>DELETE (delete instance) request</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>instance_id</strong> (<em>comma seperated string list</em>) &#8211; query argument of request</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Statuscode 403:</th><td class="field-body">DELETE MANY disallowed</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Statuscode 405:</th><td class="field-body">DELETE disallowed</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.delete_single">
+<tt class="descname">delete_single</tt><big>(</big><em>instance_id</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.delete_single"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.delete_single" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get one instance</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>instance_id</strong> (<em>list of primary keys</em>) &#8211; query argument of request</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Statuscode 204:</th><td class="field-body">instance successfull removed</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.delete_many">
+<tt class="descname">delete_many</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.delete_many"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.delete_many" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove many instances</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Statuscode 200:</th><td class="field-body">instances successfull removed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Query limit:</th><td class="field-body">limit the count of deleted instances</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Query single:</th><td class="field-body">If true sqlalchemy will raise an error if zero or more than one instances would be deleted</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.handler.BaseHandler.logger">
+<tt class="descname">logger</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.logger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tornado Restless Logger</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="api.html"
+                        title="previous chapter"><tt class="docutils literal"><span class="pre">tornado_restless.api</span></tt> &#8211; ApiManager</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="wrapper.html"
+                        title="next chapter"><tt class="docutils literal"><span class="pre">tornado_restless.wrapper</span></tt> &#8211; ModelWrapper</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/handler.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="wrapper.html" title="tornado_restless.wrapper – ModelWrapper"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="api.html" title="tornado_restless.api – ApiManager"
+             >previous</a> |</li>
+        <li><a href="../index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Martin Martimeo et. al..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

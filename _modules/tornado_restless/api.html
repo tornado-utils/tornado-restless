@@ -1,0 +1,217 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tornado_restless.api &mdash; Tornado Restless 0.3.2 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.3.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Tornado Restless 0.3.2 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for tornado_restless.api</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/python</span>
+<span class="c"># -*- encoding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">tornado.web</span> <span class="kn">import</span> <span class="n">Application</span><span class="p">,</span> <span class="n">URLSpec</span>
+
+<span class="kn">from</span> <span class="nn">.handler</span> <span class="kn">import</span> <span class="n">BaseHandler</span>
+<span class="kn">from</span> <span class="nn">.errors</span> <span class="kn">import</span> <span class="n">IllegalArgumentError</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;Martin Martimeo &lt;martin@martimeo.de&gt;&#39;</span>
+<span class="n">__date__</span> <span class="o">=</span> <span class="s">&#39;26.04.13 - 22:25&#39;</span>
+
+
+<div class="viewcode-block" id="ApiManager"><a class="viewcode-back" href="../../api/api.html#tornado_restless.api.ApiManager">[docs]</a><span class="k">class</span> <span class="nc">ApiManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The tornado restless engine</span>
+
+<span class="sd">        You normally only need one instance of this class to spawn your tornado routes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">METHODS_READ</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;GET&#39;</span><span class="p">])</span>
+    <span class="n">METHODS_MODIFY</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;POST&#39;</span><span class="p">,</span> <span class="s">&#39;PUT&#39;</span><span class="p">,</span> <span class="s">&#39;PATCH&#39;</span><span class="p">])</span>
+    <span class="n">METHODS_DELETE</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">([</span><span class="s">&#39;DELETE&#39;</span><span class="p">])</span>
+
+    <span class="n">METHODS_UPDATE</span> <span class="o">=</span> <span class="n">METHODS_READ</span> <span class="o">|</span> <span class="n">METHODS_MODIFY</span>
+    <span class="n">METHODS_ALL</span> <span class="o">=</span> <span class="n">METHODS_READ</span> <span class="o">|</span> <span class="n">METHODS_MODIFY</span> <span class="o">|</span> <span class="n">METHODS_DELETE</span>
+
+<div class="viewcode-block" id="ApiManager.__init__"><a class="viewcode-back" href="../../api/api.html#tornado_restless.api.ApiManager.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">application</span><span class="p">:</span> <span class="n">Application</span><span class="p">,</span>
+                 <span class="n">session_maker</span><span class="p">:</span> <span class="nb">type</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an instance of the tornado restless engine</span>
+
+<span class="sd">        :param session_maker: is a sqlalchemy.orm.Session class factory</span>
+<span class="sd">        :param application: is the tornado.web.Application object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">application</span> <span class="o">=</span> <span class="n">application</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">session_maker</span> <span class="o">=</span> <span class="n">session_maker</span>
+</div>
+<div class="viewcode-block" id="ApiManager.create_api_blueprint"><a class="viewcode-back" href="../../api/api.html#tornado_restless.api.ApiManager.create_api_blueprint">[docs]</a>    <span class="k">def</span> <span class="nf">create_api_blueprint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                             <span class="n">model</span><span class="p">,</span>
+                             <span class="n">methods</span><span class="p">:</span> <span class="nb">set</span><span class="o">=</span><span class="n">METHODS_READ</span><span class="p">,</span>
+                             <span class="n">preprocessor</span><span class="p">:</span> <span class="nb">dict</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">postprocessor</span><span class="p">:</span> <span class="nb">dict</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">url_prefix</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s">&#39;/api&#39;</span><span class="p">,</span>
+                             <span class="n">collection_name</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">allow_patch_many</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                             <span class="n">allow_method_override</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                             <span class="n">validation_exceptions</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">include_columns</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">exclude_columns</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">results_per_page</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                             <span class="n">max_results_per_page</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                             <span class="n">blueprint_prefix</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span>
+                             <span class="n">handler_class</span><span class="p">:</span> <span class="nb">type</span><span class="o">=</span><span class="n">BaseHandler</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">URLSpec</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a tornado route for a sqlalchemy model</span>
+
+<span class="sd">        :param model: The sqlalchemy model</span>
+<span class="sd">        :param methods: Allowed methods for this model</span>
+<span class="sd">        :param url_prefix: The url prefix of the application</span>
+<span class="sd">        :param collection_name:</span>
+<span class="sd">        :param allow_patch_many: Allow PATCH with multiple datasets</span>
+<span class="sd">        :param allow_method_override: Support X-HTTP-Method-Override Header</span>
+<span class="sd">        :param validation_exceptions:</span>
+<span class="sd">        :param include_columns: Whitelist of columns to be included</span>
+<span class="sd">        :param exclude_columns: Blacklist of columns to be excluded</span>
+<span class="sd">        :param results_per_page: The default value of how many results are returned per request</span>
+<span class="sd">        :param max_results_per_page: The hard upper limit of resutest per page</span>
+<span class="sd">        :param blueprint_prefix: The Prefix that will be used to unique collection_name for named_handlers</span>
+<span class="sd">        :param preprocessor: A dictionary of list of preprocessors that get called</span>
+<span class="sd">        :param postprocessor: A dictionary of list of postprocessor that get called</span>
+<span class="sd">        :param handler_class: The Handler Class that will be used in the route</span>
+<span class="sd">        :type handler_class: tornado_restless.handler.BaseHandler or a subclass</span>
+<span class="sd">        :return: :class:`tornado.web.URLSpec`</span>
+<span class="sd">        :raise: IllegalArgumentError</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">exclude_columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">include_columns</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">IllegalArgumentError</span><span class="p">(</span><span class="s">&#39;Cannot simultaneously specify both include columns and exclude columns.&#39;</span><span class="p">)</span>
+
+        <span class="n">table_name</span> <span class="o">=</span> <span class="n">collection_name</span> <span class="k">if</span> <span class="n">collection_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">model</span><span class="o">.</span><span class="n">__tablename__</span>
+
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span>
+                  <span class="s">&#39;manager&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="p">,</span>
+                  <span class="s">&#39;methods&#39;</span><span class="p">:</span> <span class="n">methods</span><span class="p">,</span>
+                  <span class="s">&#39;preprocessor&#39;</span><span class="p">:</span> <span class="n">preprocessor</span> <span class="ow">or</span> <span class="p">{},</span>
+                  <span class="s">&#39;postprocessor&#39;</span><span class="p">:</span> <span class="n">postprocessor</span> <span class="ow">or</span> <span class="p">{},</span>
+                  <span class="s">&#39;allow_patch_many&#39;</span><span class="p">:</span> <span class="n">allow_patch_many</span><span class="p">,</span>
+                  <span class="s">&#39;allow_method_override&#39;</span><span class="p">:</span> <span class="n">allow_method_override</span><span class="p">,</span>
+                  <span class="s">&#39;validation_exceptions&#39;</span><span class="p">:</span> <span class="n">validation_exceptions</span><span class="p">,</span>
+                  <span class="s">&#39;include_columns&#39;</span><span class="p">:</span> <span class="n">include_columns</span><span class="p">,</span>
+                  <span class="s">&#39;exclude_columns&#39;</span><span class="p">:</span> <span class="n">exclude_columns</span><span class="p">,</span>
+                  <span class="s">&#39;results_per_page&#39;</span><span class="p">:</span> <span class="n">results_per_page</span><span class="p">,</span>
+                  <span class="s">&#39;max_results_per_page&#39;</span><span class="p">:</span> <span class="n">max_results_per_page</span><span class="p">}</span>
+
+        <span class="n">blueprint</span> <span class="o">=</span> <span class="n">URLSpec</span><span class="p">(</span>
+            <span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">(?:/(.+))?[/]?&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">url_prefix</span><span class="p">,</span> <span class="n">table_name</span><span class="p">),</span>
+            <span class="n">handler_class</span><span class="p">,</span>
+            <span class="n">kwargs</span><span class="p">,</span>
+            <span class="s">&#39;</span><span class="si">%s%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">blueprint_prefix</span><span class="p">,</span> <span class="n">table_name</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">blueprint</span>
+</div>
+<div class="viewcode-block" id="ApiManager.create_api"><a class="viewcode-back" href="../../api/api.html#tornado_restless.api.ApiManager.create_api">[docs]</a>    <span class="k">def</span> <span class="nf">create_api</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">model</span><span class="p">,</span>
+                   <span class="n">virtualhost</span><span class="o">=</span><span class="s">r&quot;.*$&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates and registers a route for the model in your tornado application</span>
+
+<span class="sd">        The positional and keyword arguments are passed directly to the create_api_blueprint method</span>
+
+<span class="sd">        :param model:</span>
+<span class="sd">        :param virtualhost: bindhost for binding, .*$ in default</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">blueprint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_api_blueprint</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">vhost</span><span class="p">,</span> <span class="n">handlers</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">handlers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">vhost</span> <span class="o">==</span> <span class="n">virtualhost</span><span class="p">:</span>
+                <span class="n">handlers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">blueprint</span><span class="p">)</span>
+                <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">add_handlers</span><span class="p">(</span><span class="n">virtualhost</span><span class="p">,</span> <span class="p">[</span><span class="n">blueprint</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">application</span><span class="o">.</span><span class="n">named_handlers</span><span class="p">[</span><span class="n">blueprint</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">blueprint</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Martin Martimeo et. al..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tornado_restless.wrapper – ModelWrapper &mdash; Tornado Restless 0.3.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.3.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="Tornado Restless 0.3.2 documentation" href="../index.html" />
+    <link rel="next" title="limitations – Limitations and Differences" href="../limitations.html" />
+    <link rel="prev" title="tornado_restless.handler – BaseHandler" href="handler.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../limitations.html" title="limitations – Limitations and Differences"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="handler.html" title="tornado_restless.handler – BaseHandler"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <span class="target" id="module-tornado_restless.wrapper"></span><div class="section" id="tornado-restless-wrapper-modelwrapper">
+<h1><a class="reference internal" href="#module-tornado_restless.wrapper" title="tornado_restless.wrapper"><tt class="xref py py-mod docutils literal"><span class="pre">tornado_restless.wrapper</span></tt></a> &#8211; ModelWrapper<a class="headerlink" href="#tornado-restless-wrapper-modelwrapper" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="tornado_restless.wrapper.ModelWrapper">
+<em class="property">class </em><tt class="descclassname">tornado_restless.wrapper.</tt><tt class="descname">ModelWrapper</tt><big>(</big><em>model</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/wrapper.html#ModelWrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.wrapper.ModelWrapper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper around sqlalchemy model for having some easier functions</p>
+<dl class="method">
+<dt id="tornado_restless.wrapper.ModelWrapper.primary_keys">
+<tt class="descname">primary_keys</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/wrapper.html#ModelWrapper.primary_keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.wrapper.ModelWrapper.primary_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the primary keys</p>
+<p>Inspired by flask-restless.helpers.primary_key_names</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.wrapper.ModelWrapper.unique_keys">
+<tt class="descname">unique_keys</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/wrapper.html#ModelWrapper.unique_keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.wrapper.ModelWrapper.unique_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the primary keys</p>
+<p>Inspired by flask-restless.helpers.primary_key_names</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.wrapper.ModelWrapper.foreign_keys">
+<tt class="descname">foreign_keys</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/wrapper.html#ModelWrapper.foreign_keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.wrapper.ModelWrapper.foreign_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the foreign keys</p>
+<p>Inspired by flask-restless.helpers.primary_key_names</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.wrapper.ModelWrapper.attributes">
+<tt class="descname">attributes</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/wrapper.html#ModelWrapper.attributes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.wrapper.ModelWrapper.attributes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the attributes of the model</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.wrapper.ModelWrapper.columns">
+<tt class="descname">columns</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/wrapper.html#ModelWrapper.columns"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.wrapper.ModelWrapper.columns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the columns objects of the model</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.wrapper.ModelWrapper.relations">
+<tt class="descname">relations</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/wrapper.html#ModelWrapper.relations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.wrapper.ModelWrapper.relations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the relations objects of the model</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.wrapper.ModelWrapper.hybrids">
+<tt class="descname">hybrids</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/wrapper.html#ModelWrapper.hybrids"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.wrapper.ModelWrapper.hybrids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the relations objects of the model</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="tornado_restless.wrapper.ModelWrapper.proxies">
+<tt class="descname">proxies</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/wrapper.html#ModelWrapper.proxies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.wrapper.ModelWrapper.proxies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the proxies objects of the model</p>
+<p>Inspired by <a class="reference external" href="https://groups.google.com/forum/?fromgroups=#!topic/sqlalchemy/aDi_M4iH7d0">https://groups.google.com/forum/?fromgroups=#!topic/sqlalchemy/aDi_M4iH7d0</a></p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="handler.html"
+                        title="previous chapter"><tt class="docutils literal"><span class="pre">tornado_restless.handler</span></tt> &#8211; BaseHandler</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../limitations.html"
+                        title="next chapter"><tt class="docutils literal"><span class="pre">limitations</span></tt> &#8211; Limitations and Differences</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/api/wrapper.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../limitations.html" title="limitations – Limitations and Differences"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="handler.html" title="tornado_restless.handler – BaseHandler"
+             >previous</a> |</li>
+        <li><a href="../index.html">Tornado Restless 0.3.2 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Martin Martimeo et. al..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>
