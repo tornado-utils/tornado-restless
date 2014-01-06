@@ -1,0 +1,4 @@
+[submodule "gh_pages"]
+	path = html
+	url = git@github.com:tornado-utils/tornado-restless.git
+	branch = gh_pages
