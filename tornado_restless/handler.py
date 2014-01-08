@@ -57,6 +57,8 @@ class BaseHandler(RequestHandler):
                    allow_patch_many: bool,
                    allow_method_override: bool,
                    validation_exceptions,
+                   exclude_queries: bool,
+                   exclude_hybrids: bool,
                    include_columns: list,
                    exclude_columns: list,
                    results_per_page: int,
@@ -73,6 +75,8 @@ class BaseHandler(RequestHandler):
         :param allow_patch_many: Allow PATCH with multiple datasets
         :param allow_method_override: Support X-HTTP-Method-Override Header
         :param validation_exceptions:
+        :param exclude_queries: Don't execude dynamic queries (like from associations or lazy relations)
+        :param exclude_hybrids: When exclude_queries is True and exclude_hybrids is False, hybrids are still included.
         :param include_columns: Whitelist of columns to be included
         :param exclude_columns: Blacklist of columns to be excluded
         :param results_per_page: The default value of how many results are returned per request
@@ -100,6 +104,8 @@ class BaseHandler(RequestHandler):
 
         self.include = self.parse_columns(include_columns)
         self.exclude = self.parse_columns(exclude_columns)
+
+        self.to_dict_options = {'execute_queries': not exclude_queries, 'execute_hybrids': not exclude_hybrids}
 
     def prepare(self):
         """
@@ -780,4 +786,5 @@ class BaseHandler(RequestHandler):
         """
         return to_dict(instance,
                        include=self.include,
-                       exclude=self.exclude)
+                       exclude=self.exclude,
+                       options=self.to_dict_options)

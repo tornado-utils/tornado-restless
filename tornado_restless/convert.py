@@ -166,6 +166,7 @@ def to_deep(include,
 
 
 def to_dict(instance,
+            options=collections.defaultdict(bool),
             include=None,
             exclude=None):
     """
@@ -174,6 +175,9 @@ def to_dict(instance,
         Inspired by flask-restless.helpers.to_dict
 
         :param instance:
+        :param options: Dictionary of flags
+                          * execute_queries: Execute Query Objects
+                          * execute_hybrids: Execute Hybrids
         :param include: Columns and Relations that should be included for an instance
         :param exclude: Columns and Relations that should not be included for an instance
     """
@@ -194,11 +198,11 @@ def to_dict(instance,
 
     # Any Dictionary
     if isinstance(instance, dict) or hasattr(instance, 'items'):
-        return {k: to_dict(v, **to_deep(include, exclude, k)) for k, v in instance.items()}
+        return {k: to_dict(v, options=options, **to_deep(include, exclude, k)) for k, v in instance.items()}
 
     # Any List
     if isinstance(instance, list) or hasattr(instance, '__iter__'):
-        return [to_dict(x, include=include, exclude=exclude) for x in instance]
+        return [to_dict(x, options=options, include=include, exclude=exclude) for x in instance]
 
     # Include Columns given
     if isinstance(include, collections.Iterable):
@@ -232,14 +236,18 @@ def to_dict(instance,
         if include is False and column not in hybrids and column not in columns:
             continue
 
+        if column not in instance.__dict__ and not options.get('execute_queries', True):
+            if column not in hybrids or not options.get('execute_hybrids', True):
+                continue
+
         # Get Attribute
         node = getattr(instance, column)
 
-        # Don't execute queries if stoping deepnes
+        # Don't execute queries if stopping deepnes
         if include is False and isinstance(node, Query):
             continue
         # Otherwise query it
-        elif isinstance(node, Query):
+        elif isinstance(node, Query) and options['execute_queries']:
             node = node.all()
 
         # Convert it

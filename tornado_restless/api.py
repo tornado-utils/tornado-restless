@@ -49,6 +49,8 @@ class ApiManager(object):
                              allow_patch_many: bool=False,
                              allow_method_override: bool=False,
                              validation_exceptions=None,
+                             exclude_queries: bool=False,
+                             exclude_hybrids: bool=False,
                              include_columns: list=None,
                              exclude_columns: list=None,
                              results_per_page: int=10,
@@ -65,6 +67,8 @@ class ApiManager(object):
         :param allow_patch_many: Allow PATCH with multiple datasets
         :param allow_method_override: Support X-HTTP-Method-Override Header
         :param validation_exceptions:
+        :param exclude_queries: Don't execude dynamic queries (like from associations or lazy relations)
+        :param exclude_hybrids: When exclude_queries is True and exclude_hybrids is False, hybrids are still included.
         :param include_columns: Whitelist of columns to be included
         :param exclude_columns: Blacklist of columns to be excluded
         :param results_per_page: The default value of how many results are returned per request
@@ -92,6 +96,8 @@ class ApiManager(object):
                   'validation_exceptions': validation_exceptions,
                   'include_columns': include_columns,
                   'exclude_columns': exclude_columns,
+                  'exclude_queries': exclude_queries,
+                  'exclude_hybrids': exclude_hybrids,
                   'results_per_page': results_per_page,
                   'max_results_per_page': max_results_per_page}
 
