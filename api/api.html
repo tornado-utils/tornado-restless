@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tornado_restless.api – ApiManager &mdash; Tornado Restless 0.4.1 documentation</title>
+    <title>tornado_restless.api – ApiManager &mdash; Tornado Restless 0.4.2 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.4.1',
+        VERSION:     '0.4.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Tornado Restless 0.4.1 documentation" href="../index.html" />
+    <link rel="top" title="Tornado Restless 0.4.2 documentation" href="../index.html" />
     <link rel="next" title="tornado_restless.handler – BaseHandler" href="handler.html" />
     <link rel="prev" title="request_format – Format of requests and responses" href="../requestformat/request_format.html" /> 
   </head>
@@ -43,7 +43,7 @@
         <li class="right" >
           <a href="../requestformat/request_format.html" title="request_format – Format of requests and responses"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">Tornado Restless 0.4.1 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -98,7 +98,7 @@
 
 <dl class="method">
 <dt id="tornado_restless.api.ApiManager.create_api_blueprint">
-<tt class="descname">create_api_blueprint</tt><big>(</big><em>model</em>, <em>methods=frozenset({'GET'})</em>, <em>preprocessor=None</em>, <em>postprocessor=None</em>, <em>url_prefix='/api'</em>, <em>collection_name=None</em>, <em>allow_patch_many=False</em>, <em>allow_method_override=False</em>, <em>validation_exceptions=None</em>, <em>include_columns=None</em>, <em>exclude_columns=None</em>, <em>results_per_page=10</em>, <em>max_results_per_page=100</em>, <em>blueprint_prefix=''</em>, <em>handler_class=&lt;class 'tornado_restless.handler.BaseHandler'&gt;</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/api.html#ApiManager.create_api_blueprint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.api.ApiManager.create_api_blueprint" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">create_api_blueprint</tt><big>(</big><em>model</em>, <em>methods=frozenset({'GET'})</em>, <em>preprocessor=None</em>, <em>postprocessor=None</em>, <em>url_prefix='/api'</em>, <em>collection_name=None</em>, <em>allow_patch_many=False</em>, <em>allow_method_override=False</em>, <em>validation_exceptions=None</em>, <em>exclude_queries=False</em>, <em>exclude_hybrids=False</em>, <em>include_columns=None</em>, <em>exclude_columns=None</em>, <em>results_per_page=10</em>, <em>max_results_per_page=100</em>, <em>blueprint_prefix=''</em>, <em>handler_class=&lt;class 'tornado_restless.handler.BaseHandler'&gt;</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/api.html#ApiManager.create_api_blueprint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.api.ApiManager.create_api_blueprint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a tornado route for a sqlalchemy model</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -112,6 +112,8 @@
 <li><strong>allow_patch_many</strong> &#8211; Allow PATCH with multiple datasets</li>
 <li><strong>allow_method_override</strong> &#8211; Support X-HTTP-Method-Override Header</li>
 <li><strong>validation_exceptions</strong> &#8211; </li>
+<li><strong>exclude_queries</strong> &#8211; Don&#8217;t execude dynamic queries (like from associations or lazy relations)</li>
+<li><strong>exclude_hybrids</strong> &#8211; When exclude_queries is True and exclude_hybrids is False, hybrids are still included.</li>
 <li><strong>include_columns</strong> &#8211; Whitelist of columns to be included</li>
 <li><strong>exclude_columns</strong> &#8211; Blacklist of columns to be excluded</li>
 <li><strong>results_per_page</strong> &#8211; The default value of how many results are returned per request</li>
@@ -186,7 +188,7 @@
         <li class="right" >
           <a href="../requestformat/request_format.html" title="request_format – Format of requests and responses"
              >previous</a> |</li>
-        <li><a href="../index.html">Tornado Restless 0.4.1 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">

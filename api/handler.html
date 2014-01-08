@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tornado_restless.handler – BaseHandler &mdash; Tornado Restless 0.4.1 documentation</title>
+    <title>tornado_restless.handler – BaseHandler &mdash; Tornado Restless 0.4.2 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.4.1',
+        VERSION:     '0.4.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Tornado Restless 0.4.1 documentation" href="../index.html" />
+    <link rel="top" title="Tornado Restless 0.4.2 documentation" href="../index.html" />
     <link rel="next" title="tornado_restless.wrapper – ModelWrapper" href="wrapper.html" />
     <link rel="prev" title="tornado_restless.api – ApiManager" href="api.html" /> 
   </head>
@@ -43,7 +43,7 @@
         <li class="right" >
           <a href="api.html" title="tornado_restless.api – ApiManager"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">Tornado Restless 0.4.1 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -67,7 +67,7 @@ the instance_id parameter the associated _single / _many method, so you probably
 <p>If you want completly disable a method overwrite the SUPPORTED_METHODS constant</p>
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.initialize">
-<tt class="descname">initialize</tt><big>(</big><em>model</em>, <em>manager</em>, <em>methods</em>, <em>preprocessor</em>, <em>postprocessor</em>, <em>allow_patch_many</em>, <em>allow_method_override</em>, <em>validation_exceptions</em>, <em>include_columns</em>, <em>exclude_columns</em>, <em>results_per_page</em>, <em>max_results_per_page</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.initialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.initialize" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">initialize</tt><big>(</big><em>model</em>, <em>manager</em>, <em>methods</em>, <em>preprocessor</em>, <em>postprocessor</em>, <em>allow_patch_many</em>, <em>allow_method_override</em>, <em>validation_exceptions</em>, <em>exclude_queries</em>, <em>exclude_hybrids</em>, <em>include_columns</em>, <em>exclude_columns</em>, <em>results_per_page</em>, <em>max_results_per_page</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.initialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.initialize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Init of the handler, derives arguments from api create_api_blueprint</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -82,6 +82,8 @@ the instance_id parameter the associated _single / _many method, so you probably
 <li><strong>allow_patch_many</strong> &#8211; Allow PATCH with multiple datasets</li>
 <li><strong>allow_method_override</strong> &#8211; Support X-HTTP-Method-Override Header</li>
 <li><strong>validation_exceptions</strong> &#8211; </li>
+<li><strong>exclude_queries</strong> &#8211; Don&#8217;t execude dynamic queries (like from associations or lazy relations)</li>
+<li><strong>exclude_hybrids</strong> &#8211; When exclude_queries is True and exclude_hybrids is False, hybrids are still included.</li>
 <li><strong>include_columns</strong> &#8211; Whitelist of columns to be included</li>
 <li><strong>exclude_columns</strong> &#8211; Blacklist of columns to be excluded</li>
 <li><strong>results_per_page</strong> &#8211; The default value of how many results are returned per request</li>
@@ -359,7 +361,7 @@ it will return instances of the nth page and skip offset items</p>
         <li class="right" >
           <a href="api.html" title="tornado_restless.api – ApiManager"
              >previous</a> |</li>
-        <li><a href="../index.html">Tornado Restless 0.4.1 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
