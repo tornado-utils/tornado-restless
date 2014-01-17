@@ -69,6 +69,9 @@ def to_filter(instance,
             op = "has"
             argument_filter["name"] = name
             right = to_filter(instance=left.property.mapper.class_, filters=[argument_filter])
+        elif argument_filter["name"] == "~":
+            left = instance
+            op = "attr_is"
         else:
             left = getattr(instance, argument_filter["name"])
 
@@ -129,6 +132,12 @@ def to_filter(instance,
             alchemy_filters.append(left.asc())
         elif op in ["desc"]:
             alchemy_filters.append(left.desc())
+
+        # Additional Checks
+        elif op in ["attr_is"]:
+            alchemy_filters.append(getattr(left, right))
+        elif op in ["method_is"]:
+            alchemy_filters.append(getattr(left, right)())
 
         # Test comparator
         elif hasattr(left.comparator, op):
