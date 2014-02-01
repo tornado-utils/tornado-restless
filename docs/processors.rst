@@ -46,7 +46,7 @@ Arguments:
           """ Called on a single GET request """
           pass
 
-      def get_many(filters: list, model: ModelWrapper, handler: BaseHandler):
+      def get_many(filters: list, search_params: dict, model: ModelWrapper, handler: BaseHandler):
           """ Called on a many GET request """
           pass
 

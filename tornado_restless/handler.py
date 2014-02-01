@@ -712,39 +712,42 @@ class BaseHandler(RequestHandler):
             :query single: If true sqlalchemy will raise an error if zero or more than one instances would be deleted
         """
 
-        # Results per Page
-        results_per_page = int(self.get_argument("results_per_page", self.results_per_page))
-        if results_per_page > self.max_results_per_page:
+        # All search params
+        search_params = {'single': self.get_query_argument("single", False),
+                         'results_per_page': int(self.get_argument("results_per_page", self.results_per_page)),
+                         'offset': int(self.get_query_argument("offset", 0))}
+
+        # Results per Page Check
+        if search_params['results_per_page'] > self.max_results_per_page:
             raise IllegalArgumentError("request.results_per_page > application.max_results_per_page")
 
         # Offset & Page
-        offset = int(self.get_query_argument("offset", 0))
         page = int(self.get_argument("page", '1')) - 1
-        offset += page * results_per_page
-        if offset < 0:
+        search_params['offset'] += page * search_params['results_per_page']
+        if search_params['offset'] < 0:
             raise IllegalArgumentError("request.offset < 0")
+
+        # Limit
+        search_params['limit'] = self.get_query_argument("limit", search_params['results_per_page'] or None)
 
         # Filters
         filters = self.get_filters()
 
         # Call Preprocessor
-        self._call_preprocessor(filters=filters)
-
-        # Limit
-        limit = self.get_query_argument("limit", results_per_page if results_per_page > 0 else None)
+        self._call_preprocessor(filters=filters, search_params=search_params)
 
         # Num Results
         num_results = self.model.count(filters=filters)
-        if results_per_page:
-            total_pages = ceil(num_results / results_per_page)
+        if search_params['results_per_page']:
+            total_pages = ceil(num_results / search_params['results_per_page'])
         else:
             total_pages = 1
 
         # Get Instances
-        if self.get_query_argument("single", False):
-            instances = [self.model.one(offset=offset, filters=filters)]
+        if search_params['single']:
+            instances = [self.model.one(offset=search_params['offset'], filters=filters)]
         else:
-            instances = self.model.all(offset=offset, limit=limit, filters=filters)
+            instances = self.model.all(offset=search_params['offset'], limit=search_params['limit'], filters=filters)
 
         return {'num_results': num_results,
                 "total_pages": total_pages,
