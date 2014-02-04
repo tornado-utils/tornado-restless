@@ -251,124 +251,126 @@ class SessionedModelWrapper(ModelWrapper):
         super().__init__(model)
         self.session = session
 
-    def one(self, offset: int=None, filters: list=()) -> object:
-        """
-            Gets one instance of the model filtered by filters
-
-            :param offset: Offset for request
-            :param filters: Filters and OrderBy Clauses
-        """
-        instance = self.session.query(self.model)
-        for expression in filters:
-            if _is_ordering_expression(expression):
-                instance = instance.order_by(expression)
-            else:
-                instance = instance.filter_by(expression)
-        if offset is not None:
-            instance = instance.offset(offset)
-        return instance.one()
-
     @staticmethod
-    def get_all(instance: Query, offset: int=None, limit: int=None, filters: list=()) -> list:
-        """
-            Gets all instances of the query instance
-
-            :param instance: sqlalchemy queriable
-            :param offset: Offset for request
-            :param limit: Limit for request
-            :param filters: Filters and OrderBy Clauses
-        """
-        for expression in filters:
+    def _apply_kwargs(instance: Query, **kwargs) -> Query:
+        for expression in kwargs.pop('filters', []):
             if _is_ordering_expression(expression):
                 instance = instance.order_by(expression)
             else:
                 instance = instance.filter(expression)
-        if offset is not None:
-            instance = instance.offset(offset)
-        if limit is not None:
-            instance = instance.limit(limit)
-        return instance.all()
 
-    def all(self, offset: int=None, limit: int=None, filters: list=()) -> list:
+        if 'offset' in kwargs:
+            offset = kwargs.pop('offset')
+            foffset = lambda instance: instance.offset(offset)
+        else:
+            foffset = lambda instance: instance
+
+        if 'limit' in kwargs:
+            limit = kwargs.pop('limit')
+            flimit = lambda instance: instance.limit(limit)
+        else:
+            flimit = lambda instance: instance
+
+        instance = instance.filter_by(**kwargs)
+        instance = foffset(instance)
+        instance = flimit(instance)
+        return instance
+
+    def one(self, filters: list=(), **kwargs) -> object:
         """
-            Gets all instances of the model filtered by filters
+            Gets one instance of the model filtered by filters
 
-            :param offset: Offset for request
-            :param limit: Limit for request
             :param filters: Filters and OrderBy Clauses
+            :param kwargs: Additional filters passed to filter_by
+            :keyword offset: Offset for request
         """
-        instance = self.session.query(self.model)
-        return self.get_all(instance, offset=offset, limit=limit, filters=filters)
+        if isinstance(self, SessionedModelWrapper):
+            instance = self.session.query(self.model)
+        else:
+            instance = self
 
-    def update(self, values: dict, offset: int=None, limit: int=None, filters: list=()) -> int:
+        return SessionedModelWrapper._apply_kwargs(instance, filters=filters, **kwargs).one()
+
+    def all(self, filters: list=(), **kwargs) -> list:
+        """
+            Gets all instances of the query instance
+
+            :param filters: Filters and OrderBy Clauses
+            :param kwargs: Additional filters passed to filter_by
+            :keyword limit: Limit for request
+            :keyword offset: Offset for request
+        """
+        if isinstance(self, SessionedModelWrapper):
+            instance = self.session.query(self.model)
+        else:
+            instance = self
+
+        return SessionedModelWrapper._apply_kwargs(instance, filters=filters, **kwargs).all()
+
+    def update(self, values: dict, filters: list=(), **kwargs) -> int:
         """
             Updates all instances of the model filtered by filters
 
             :param values: Dictionary of values
-            :param offset: Offset for request
-            :param limit: Limit for request
             :param filters: Filters and OrderBy Clauses
+            :param kwargs: Additional filters passed to filter_by
+            :keyword limit: Limit for request
+            :keyword offset: Offset for request
         """
-        instance = self.session.query(self.model)
-        for expression in filters:
-            if _is_ordering_expression(expression):
-                instance = instance.order_by(expression)
-            else:
-                instance = instance.filter_by(expression)
-        if offset is not None:
-            instance = instance.offset(offset)
-        if limit is not None:
-            instance = instance.limit(limit)
-        return instance.update(values)
+        if isinstance(self, SessionedModelWrapper):
+            instance = self.session.query(self.model)
+        else:
+            instance = self
 
-    def delete(self, offset: int=None, limit: int=None, filters: list=()) -> int:
+        return SessionedModelWrapper._apply_kwargs(instance, filters=filters, **kwargs).update(values)
+
+    def delete(self, filters: list=(), **kwargs) -> int:
         """
             Delete all instances of the model filtered by filters
 
-            :param offset: Offset for request
-            :param limit: Limit for request
+            :param values: Dictionary of values
             :param filters: Filters and OrderBy Clauses
+            :param kwargs: Additional filters passed to filter_by
+            :keyword limit: Limit for request
+            :keyword offset: Offset for request
         """
-        instance = self.session.query(self.model)
-        for expression in filters:
-            if _is_ordering_expression(expression):
-                instance = instance.order_by(expression)
-            else:
-                instance = instance.filter_by(expression)
-        if offset is not None:
-            instance = instance.offset(offset)
-        if limit is not None:
-            instance = instance.limit(limit)
-        return instance.delete()
+        if isinstance(self, SessionedModelWrapper):
+            instance = self.session.query(self.model)
+        else:
+            instance = self
 
-    def count(self, filters: list=()) -> int:
+        return SessionedModelWrapper._apply_kwargs(instance, filters=filters, **kwargs).delete()
+
+    def count(self, filters: list=(), **kwargs) -> int:
         """
             Gets the instance count
 
             :param filters: Filters and OrderBy Clauses
+            :param kwargs: Additional filters passed to filter_by
         """
-        instance = self.session.query(self.model)
-        for expression in filters:
-            if _is_ordering_expression(expression):
-                instance = instance.order_by(expression)
-            else:
-                instance = instance.filter(expression)
-        return instance.count()
+        if isinstance(self, SessionedModelWrapper):
+            instance = self.session.query(self.model)
+        else:
+            instance = self
 
-    def get(self, instance_id: list) -> object:
+        return SessionedModelWrapper._apply_kwargs(instance, filters=filters, **kwargs).count()
+
+    def get(self, *pargs) -> object:
         """
             Gets one instance of the model based on primary_keys
 
-            :param instance_id: list of primary_keys
+            :param pargs: ident
+            :raise NoResultFound: If no element has been received
         """
-        if len(instance_id) == 1:
-            primary_keys = instance_id[0]
+        if isinstance(self, SessionedModelWrapper):
+            instance = self.session.query(self.model)
         else:
-            primary_keys = tuple(instance_id)
-        instance = self.session.query(self.model).get(primary_keys)
-        if not instance:
-            raise NoResultFound("No row was found for get()")
-        return instance
+            instance = self
+
+        rtn = instance.get(pargs)
+        if not rtn:
+            raise NoResultFound("No element recieved for %s" % pargs)
+        return rtn
 
     def __call__(self, **kwargs):
         instance = self.model()
