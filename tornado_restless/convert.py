@@ -111,7 +111,7 @@ def to_filter(instance,
         elif op in ["not_in"]:
             alchemy_filters.append(left.notin_(right))
         elif op in ["has"] and isinstance(right, list):
-            alchemy_filters.append(left.has(*right))
+            alchemy_filters.append(left.any(*right))
         elif op in ["has"]:
             alchemy_filters.append(left.has(right))
         elif op in ["any"]:
