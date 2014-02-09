@@ -691,7 +691,7 @@ class BaseHandler(RequestHandler):
         self._call_preprocessor(instance_id=instance_id)
 
         # Get Instance
-        instance = self.model.get(instance_id)
+        instance = self.model.get(*instance_id)
 
         # To Dict
         return self.to_dict(instance)

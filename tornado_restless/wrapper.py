@@ -367,9 +367,14 @@ class SessionedModelWrapper(ModelWrapper):
         else:
             instance = self
 
-        rtn = instance.get(pargs)
+        if not isinstance(pargs, tuple):
+            rtn = instance.get(*pargs)
+        else:
+            rtn = instance.get(pargs)
+
         if not rtn:
             raise NoResultFound("No element recieved for %s" % pargs)
+
         return rtn
 
     def __call__(self, **kwargs):
