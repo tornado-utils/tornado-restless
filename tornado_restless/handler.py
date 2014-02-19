@@ -293,7 +293,7 @@ class BaseHandler(RequestHandler):
                 self._call_preprocessor(instance_id=instance_id, data=values)
 
                 # Get Instance
-                instance = self.model.get(instance_id)
+                instance = self.model.get(*instance_id)
 
                 # Set Values
                 for (key, value) in values.items():
@@ -404,7 +404,7 @@ class BaseHandler(RequestHandler):
         self._call_preprocessor(instance_id=instance_id)
 
         # Get Instance
-        instance = self.model.get(instance_id)
+        instance = self.model.get(*instance_id)
 
         # Trigger deletion
         self.model.session.delete(instance)
