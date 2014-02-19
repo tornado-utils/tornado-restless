@@ -373,7 +373,7 @@ class SessionedModelWrapper(ModelWrapper):
             rtn = instance.get(pargs)
 
         if not rtn:
-            raise NoResultFound("No element recieved for %s" % pargs)
+            raise NoResultFound("No element recieved for %s(%s)" % (self.model.__collectionname__, pargs))
 
         return rtn
 
