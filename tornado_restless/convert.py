@@ -6,12 +6,14 @@
 from datetime import datetime, date, time
 import collections
 import itertools
+
 from sqlalchemy.orm import object_mapper
 from sqlalchemy.orm.exc import UnmappedInstanceError
 from sqlalchemy.orm.query import Query
 
 from .errors import IllegalArgumentError, DictConvertionError
 from .wrapper import ModelWrapper
+
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '23.05.13 - 17:41'
@@ -40,7 +42,9 @@ def to_filter(instance,
         direction = argument_order['direction']
         if direction not in ["asc", "desc"]:
             raise IllegalArgumentError("Direction unknown")
-        argument_filters.append({'name': argument_order['field'], 'op': direction})
+        argument_filters.append({'name': argument_order['field'], 'op': direction,
+                                 'nullsfirst': argument_order.get('nullsfirst', False),
+                                 'nullslast': argument_order.get('nullslast', False)})
 
     # Create Alchemy Filters
     alchemy_filters = []
@@ -128,10 +132,13 @@ def to_filter(instance,
             alchemy_filters.append(left.endswith(right))
 
         # Order By Operators
-        elif op in ["asc"]:
-            alchemy_filters.append(left.asc())
-        elif op in ["desc"]:
-            alchemy_filters.append(left.desc())
+        elif op in ["asc", "desc"]:
+            if argument_filter.get("nullsfirst", False):
+                alchemy_filters.append(getattr(left, op)().nullsfirst())
+            elif argument_filter.get("nullslast", False):
+                alchemy_filters.append(getattr(left, op)().nullslast())
+            else:
+                alchemy_filters.append(getattr(left, op)())
 
         # Additional Checks
         elif op in ["attr_is"]:
