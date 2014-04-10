@@ -45,6 +45,7 @@ class BaseHandler(RequestHandler):
         If you want completly disable a method overwrite the SUPPORTED_METHODS constant
     """
 
+    ID_SEPARATOR = ","
     SUPPORTED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
     # noinspection PyMethodOverriding
@@ -674,7 +675,7 @@ class BaseHandler(RequestHandler):
         if instance_id is None:
             result = self.get_many()
         else:
-            result = self.get_single(instance_id.split(","))
+            result = self.get_single(instance_id.split(self.ID_SEPARATOR))
 
         self._call_postprocessor(result=result)
         self.finish(result)
