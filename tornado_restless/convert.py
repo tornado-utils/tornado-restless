@@ -175,7 +175,7 @@ def to_deep(include,
 
     try:
         rtn['exclude'] = exclude[key]
-    except TypeError:
+    except (TypeError, KeyError):
         rtn['exclude'] = None
 
     return rtn
