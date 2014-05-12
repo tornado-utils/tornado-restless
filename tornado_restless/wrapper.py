@@ -211,10 +211,12 @@ class ModelWrapper(object):
             Returns the relations objects of the model
         """
         Proxy = namedtuple('Proxy', ['key', 'field'])
-        if hasattr(instance, 'iterate_properties'):
+        # Try sqlalchemy inspection
+        try:
             return [Proxy(key, field) for key, field in sqinspect(instance).all_orm_descriptors.items()
                     if isinstance(field, hybrid_property)]
-        else:
+        # Use Inspect
+        except NoInspectionAvailable:
             return [Proxy(key, field) for key, field in inspect.getmembers(instance)
                     if isinstance(field, hybrid_property)]
 
