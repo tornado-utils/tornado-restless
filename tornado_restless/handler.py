@@ -15,6 +15,7 @@ from urllib.parse import parse_qs
 import sys
 import itertools
 
+from sqlalchemy import inspect as sqinspect
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import UnmappedInstanceError
 from sqlalchemy.util import memoized_instancemethod, memoized_property
@@ -90,9 +91,10 @@ class BaseHandler(RequestHandler):
         if allow_method_override and 'X-HTTP-Method-Override' in self.request.headers:
             self.request.method = self.request.headers['X-HTTP-Method-Override']
 
-        super().initialize()
+        super(BaseHandler, self).initialize()
 
         self.model = SessionedModelWrapper(model, manager.session_maker())
+        self.pk_length = len(sqinspect(model).primary_key)
         self.methods = [method.lower() for method in methods]
         self.allow_patch_many = allow_patch_many
         self.validation_exceptions = validation_exceptions
@@ -228,7 +230,7 @@ class BaseHandler(RequestHandler):
             else:
                 raise MethodNotAllowedError(self.request.method, status_code=403)
         else:
-            result = self.patch_single(instance_id.split(","))
+            result = self.patch_single(self.parse_pk(instance_id))
 
         self._call_postprocessor(result=result)
         self.finish(result)
@@ -348,7 +350,7 @@ class BaseHandler(RequestHandler):
             else:
                 raise MethodNotAllowedError(self.request.method, status_code=403)
         else:
-            result = self.delete_single(instance_id.split(","))
+            result = self.delete_single(self.parse_pk(instance_id))
 
         self._call_postprocessor(result=result)
         self.finish(result)
@@ -439,7 +441,7 @@ class BaseHandler(RequestHandler):
             else:
                 raise MethodNotAllowedError(self.request.method, status_code=403)
         else:
-            result = self.put_single(instance_id.split(","))
+            result = self.put_single(self.parse_pk(instance_id))
 
         self._call_postprocessor(result=result)
         self.finish(result)
@@ -675,7 +677,7 @@ class BaseHandler(RequestHandler):
         if instance_id is None:
             result = self.get_many()
         else:
-            result = self.get_single(instance_id.split(self.ID_SEPARATOR))
+            result = self.get_single(self.parse_pk(instance_id))
 
         self._call_postprocessor(result=result)
         self.finish(result)
@@ -792,3 +794,6 @@ class BaseHandler(RequestHandler):
                        include=self.include,
                        exclude=self.exclude,
                        options=self.to_dict_options)
+
+    def parse_pk(self, instance_id):
+        return instance_id.split(self.ID_SEPARATOR, self.pk_length - 1)
