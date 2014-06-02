@@ -6,6 +6,7 @@
 from collections import namedtuple
 import inspect
 import logging
+
 from sqlalchemy import inspect as sqinspect
 from sqlalchemy.exc import NoInspectionAvailable
 from sqlalchemy.ext.associationproxy import AssociationProxy
@@ -17,6 +18,7 @@ from sqlalchemy.orm.interfaces import MapperProperty
 from sqlalchemy.orm.properties import RelationshipProperty
 from sqlalchemy.sql.operators import is_ordering_modifier
 from sqlalchemy.util import memoized_property
+
 
 __author__ = 'Martin Martimeo <martin@martimeo.de>'
 __date__ = '27.04.13 - 00:14'
@@ -38,9 +40,15 @@ def _filter(instance, condition) -> dict:
 
     # Try sqlalchemy inspection
     try:
-        return {field.key: field for key, field in sqinspect(instance).all_orm_descriptors.items()
-                if condition(field)}
-
+        inspection = sqinspect(instance)
+        if hasattr(inspection, "all_orm_descriptors"):
+            return {field.key: field for key, field in inspection.all_orm_descriptors.items()
+                    if condition(field)}
+        elif hasattr(inspection, "attrs"):
+            return {field.key: field for key, field in inspection.attrs.items()
+                    if condition(field)}
+        else:
+            raise NoInspectionAvailable()
     # Use Inspect
     except NoInspectionAvailable:
         return {field.key: field for key, field in inspect.getmembers(instance)
@@ -203,10 +211,12 @@ class ModelWrapper(object):
             Returns the relations objects of the model
         """
         Proxy = namedtuple('Proxy', ['key', 'field'])
-        if hasattr(instance, 'iterate_properties'):
+        # Try sqlalchemy inspection
+        try:
             return [Proxy(key, field) for key, field in sqinspect(instance).all_orm_descriptors.items()
                     if isinstance(field, hybrid_property)]
-        else:
+        # Use Inspect
+        except NoInspectionAvailable:
             return [Proxy(key, field) for key, field in inspect.getmembers(instance)
                     if isinstance(field, hybrid_property)]
 
