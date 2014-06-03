@@ -365,7 +365,7 @@ class SessionedModelWrapper(ModelWrapper):
         else:
             instance = self
 
-        return SessionedModelWrapper._apply_kwargs(instance, filters=filters, **kwargs).count()
+        return SessionedModelWrapper._apply_kwargs(instance, filters=filters, **kwargs).order_by(False).count()
 
     def get(self, *pargs) -> object:
         """
@@ -385,7 +385,7 @@ class SessionedModelWrapper(ModelWrapper):
             rtn = instance.get(pargs)
 
         if not rtn:
-            raise NoResultFound("No element recieved for %s(%s)" % (self.model.__collectionname__, pargs))
+            raise NoResultFound("No element recieved for %s(%s)" % (self.__collectionname__, pargs))
 
         return rtn
 
@@ -395,8 +395,3 @@ class SessionedModelWrapper(ModelWrapper):
             setattr(instance, key, value)
         self.session.add(instance)
         return instance
-
-
-
-
-
