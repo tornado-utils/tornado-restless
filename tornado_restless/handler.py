@@ -748,14 +748,17 @@ class BaseHandler(RequestHandler):
 
         # Get Instances
         if search_params['single']:
-            instances = [self.model.one(offset=search_params['offset'], filters=filters)]
+            instance = self.model.one(offset=search_params['offset'],
+                                      filters=filters)
+            return self.to_dict(instance)
         else:
-            instances = self.model.all(offset=search_params['offset'], limit=search_params['limit'], filters=filters)
-
-        return {'num_results': num_results,
-                "total_pages": total_pages,
-                "page": page + 1,
-                "objects": self.to_dict(instances)}
+            instances = self.model.all(offset=search_params['offset'],
+                                       limit=search_params['limit'],
+                                       filters=filters)
+            return {'num_results': num_results,
+                    "total_pages": total_pages,
+                    "page": page + 1,
+                    "objects": instances}
 
     def _call_preprocessor(self, *args, **kwargs):
         """
