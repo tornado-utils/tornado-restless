@@ -17,7 +17,7 @@ import itertools
 
 from sqlalchemy import inspect as sqinspect
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm.exc import UnmappedInstanceError
+from sqlalchemy.orm.exc import NoResultFound, UnmappedInstanceError, MultipleResultsFound
 from sqlalchemy.util import memoized_instancemethod, memoized_property
 from tornado.web import RequestHandler, HTTPError
 
@@ -187,9 +187,20 @@ class BaseHandler(RequestHandler):
                 self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
                                  message="%s" % exc_value))
             elif issubclass(exc_type, SQLAlchemyError):
-                self.set_status(400, reason='SQLAlchemy: Bad Request')
+                if issubclass(exc_type, NoResultFound):
+                    status = 404
+                    reason = message = 'No result found'
+                elif issubclass(exc_type, MultipleResultsFound):
+                    status = 400
+                    reason = 'SQLAlchemy: Bad Request'
+                    message = 'Multiple results found'
+                else:
+                    status = 400
+                    reason = 'SQLAlchemy: Bad Request'
+                    message = "%s" % exc_value
+                self.set_status(status, reason=reason)
                 self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
-                                 message="%s" % exc_value))
+                                 message=message))
             elif issubclass(exc_type, IllegalArgumentError):
                 self.set_status(400, reason='Restless: Bad Arguments')
                 self.finish(dict(type=exc_type.__module__ + "." + exc_type.__name__,
