@@ -758,7 +758,7 @@ class BaseHandler(RequestHandler):
             return {'num_results': num_results,
                     "total_pages": total_pages,
                     "page": page + 1,
-                    "objects": instances}
+                    "objects": self.to_dict(instances)}
 
     def _call_preprocessor(self, *args, **kwargs):
         """
