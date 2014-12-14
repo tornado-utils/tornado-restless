@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tornado_restless.api – ApiManager &mdash; Tornado Restless 0.4.2 documentation</title>
+    <title>tornado_restless.api – ApiManager &mdash; Tornado Restless 0.4.3 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.4.2',
+        VERSION:     '0.4.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Tornado Restless 0.4.2 documentation" href="../index.html" />
+    <link rel="top" title="Tornado Restless 0.4.3 documentation" href="../index.html" />
     <link rel="next" title="tornado_restless.handler – BaseHandler" href="handler.html" />
     <link rel="prev" title="request_format – Format of requests and responses" href="../requestformat/request_format.html" /> 
   </head>
@@ -43,7 +43,7 @@
         <li class="right" >
           <a href="../requestformat/request_format.html" title="request_format – Format of requests and responses"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">Tornado Restless 0.4.3 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -56,12 +56,12 @@
 <h1><a class="reference internal" href="#module-tornado_restless.api" title="tornado_restless.api"><tt class="xref py py-mod docutils literal"><span class="pre">tornado_restless.api</span></tt></a> &#8211; ApiManager<a class="headerlink" href="#tornado-restless-api-apimanager" title="Permalink to this headline">¶</a></h1>
 <dl class="class">
 <dt id="tornado_restless.api.ApiManager">
-<em class="property">class </em><tt class="descclassname">tornado_restless.api.</tt><tt class="descname">ApiManager</tt><big>(</big><em>application</em>, <em>session_maker=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/api.html#ApiManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.api.ApiManager" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">tornado_restless.api.</tt><tt class="descname">ApiManager</tt><big>(</big><em>application: tornado.web.Application</em>, <em>session_maker: type=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/api.html#ApiManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.api.ApiManager" title="Permalink to this definition">¶</a></dt>
 <dd><p>The tornado restless engine</p>
 <p>You normally only need one instance of this class to spawn your tornado routes</p>
 <dl class="method">
 <dt id="tornado_restless.api.ApiManager.__init__">
-<tt class="descname">__init__</tt><big>(</big><em>application</em>, <em>session_maker=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/api.html#ApiManager.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.api.ApiManager.__init__" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">__init__</tt><big>(</big><em>application: tornado.web.Application</em>, <em>session_maker: type=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/api.html#ApiManager.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.api.ApiManager.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an instance of the tornado restless engine</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -98,7 +98,7 @@
 
 <dl class="method">
 <dt id="tornado_restless.api.ApiManager.create_api_blueprint">
-<tt class="descname">create_api_blueprint</tt><big>(</big><em>model</em>, <em>methods=frozenset({'GET'})</em>, <em>preprocessor=None</em>, <em>postprocessor=None</em>, <em>url_prefix='/api'</em>, <em>collection_name=None</em>, <em>allow_patch_many=False</em>, <em>allow_method_override=False</em>, <em>validation_exceptions=None</em>, <em>exclude_queries=False</em>, <em>exclude_hybrids=False</em>, <em>include_columns=None</em>, <em>exclude_columns=None</em>, <em>results_per_page=10</em>, <em>max_results_per_page=100</em>, <em>blueprint_prefix=''</em>, <em>handler_class=&lt;class 'tornado_restless.handler.BaseHandler'&gt;</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/api.html#ApiManager.create_api_blueprint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.api.ApiManager.create_api_blueprint" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">create_api_blueprint</tt><big>(</big><em>model</em>, <em>methods: set=frozenset({'GET'})</em>, <em>preprocessor: dict=None</em>, <em>postprocessor: dict=None</em>, <em>url_prefix: str='/api'</em>, <em>collection_name: str=None</em>, <em>allow_patch_many: bool=False</em>, <em>allow_method_override: bool=False</em>, <em>validation_exceptions=None</em>, <em>exclude_queries: bool=False</em>, <em>exclude_hybrids: bool=False</em>, <em>include_columns: list=None</em>, <em>exclude_columns: list=None</em>, <em>results_per_page: int=10</em>, <em>max_results_per_page: int=100</em>, <em>blueprint_prefix: str=''</em>, <em>handler_class: type=&lt;class 'tornado_restless.handler.BaseHandler'&gt;</em><big>)</big> &rarr; tornado.web.URLSpec<a class="reference internal" href="../_modules/tornado_restless/api.html#ApiManager.create_api_blueprint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.api.ApiManager.create_api_blueprint" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a tornado route for a sqlalchemy model</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -128,7 +128,7 @@
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><tt class="xref py py-class docutils literal"><span class="pre">tornado.web.URLSpec</span></tt></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raise :</th><td class="field-body"><p class="first last">IllegalArgumentError</p>
+<tr class="field-odd field"><th class="field-name">Raise:</th><td class="field-body"><p class="first last">IllegalArgumentError</p>
 </td>
 </tr>
 </tbody>
@@ -188,12 +188,12 @@
         <li class="right" >
           <a href="../requestformat/request_format.html" title="request_format – Format of requests and responses"
              >previous</a> |</li>
-        <li><a href="../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">Tornado Restless 0.4.3 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Martin Martimeo et. al..
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

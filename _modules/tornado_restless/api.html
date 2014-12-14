@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tornado_restless.api &mdash; Tornado Restless 0.4.2 documentation</title>
+    <title>tornado_restless.api &mdash; Tornado Restless 0.4.3 documentation</title>
     
     <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.4.2',
+        VERSION:     '0.4.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Tornado Restless 0.4.2 documentation" href="../../index.html" />
+    <link rel="top" title="Tornado Restless 0.4.3 documentation" href="../../index.html" />
     <link rel="up" title="Module code" href="../index.html" /> 
   </head>
   <body>
@@ -36,7 +36,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Tornado Restless 0.4.3 documentation</a> &raquo;</li>
           <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>  
@@ -98,6 +98,8 @@
                              <span class="n">allow_patch_many</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
                              <span class="n">allow_method_override</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
                              <span class="n">validation_exceptions</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                             <span class="n">exclude_queries</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                             <span class="n">exclude_hybrids</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
                              <span class="n">include_columns</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                              <span class="n">exclude_columns</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                              <span class="n">results_per_page</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
@@ -114,6 +116,8 @@
 <span class="sd">        :param allow_patch_many: Allow PATCH with multiple datasets</span>
 <span class="sd">        :param allow_method_override: Support X-HTTP-Method-Override Header</span>
 <span class="sd">        :param validation_exceptions:</span>
+<span class="sd">        :param exclude_queries: Don&#39;t execude dynamic queries (like from associations or lazy relations)</span>
+<span class="sd">        :param exclude_hybrids: When exclude_queries is True and exclude_hybrids is False, hybrids are still included.</span>
 <span class="sd">        :param include_columns: Whitelist of columns to be included</span>
 <span class="sd">        :param exclude_columns: Blacklist of columns to be excluded</span>
 <span class="sd">        :param results_per_page: The default value of how many results are returned per request</span>
@@ -141,6 +145,8 @@
                   <span class="s">&#39;validation_exceptions&#39;</span><span class="p">:</span> <span class="n">validation_exceptions</span><span class="p">,</span>
                   <span class="s">&#39;include_columns&#39;</span><span class="p">:</span> <span class="n">include_columns</span><span class="p">,</span>
                   <span class="s">&#39;exclude_columns&#39;</span><span class="p">:</span> <span class="n">exclude_columns</span><span class="p">,</span>
+                  <span class="s">&#39;exclude_queries&#39;</span><span class="p">:</span> <span class="n">exclude_queries</span><span class="p">,</span>
+                  <span class="s">&#39;exclude_hybrids&#39;</span><span class="p">:</span> <span class="n">exclude_hybrids</span><span class="p">,</span>
                   <span class="s">&#39;results_per_page&#39;</span><span class="p">:</span> <span class="n">results_per_page</span><span class="p">,</span>
                   <span class="s">&#39;max_results_per_page&#39;</span><span class="p">:</span> <span class="n">max_results_per_page</span><span class="p">}</span>
 
@@ -205,13 +211,13 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Tornado Restless 0.4.3 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Martin Martimeo et. al..
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

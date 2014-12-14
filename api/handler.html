@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tornado_restless.handler – BaseHandler &mdash; Tornado Restless 0.4.2 documentation</title>
+    <title>tornado_restless.handler – BaseHandler &mdash; Tornado Restless 0.4.3 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '0.4.2',
+        VERSION:     '0.4.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <link rel="top" title="Tornado Restless 0.4.2 documentation" href="../index.html" />
+    <link rel="top" title="Tornado Restless 0.4.3 documentation" href="../index.html" />
     <link rel="next" title="tornado_restless.wrapper – ModelWrapper" href="wrapper.html" />
     <link rel="prev" title="tornado_restless.api – ApiManager" href="api.html" /> 
   </head>
@@ -43,7 +43,7 @@
         <li class="right" >
           <a href="api.html" title="tornado_restless.api – ApiManager"
              accesskey="P">previous</a> |</li>
-        <li><a href="../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">Tornado Restless 0.4.3 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -67,7 +67,7 @@ the instance_id parameter the associated _single / _many method, so you probably
 <p>If you want completly disable a method overwrite the SUPPORTED_METHODS constant</p>
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.initialize">
-<tt class="descname">initialize</tt><big>(</big><em>model</em>, <em>manager</em>, <em>methods</em>, <em>preprocessor</em>, <em>postprocessor</em>, <em>allow_patch_many</em>, <em>allow_method_override</em>, <em>validation_exceptions</em>, <em>exclude_queries</em>, <em>exclude_hybrids</em>, <em>include_columns</em>, <em>exclude_columns</em>, <em>results_per_page</em>, <em>max_results_per_page</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.initialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.initialize" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">initialize</tt><big>(</big><em>model</em>, <em>manager</em>, <em>methods: set</em>, <em>preprocessor: dict</em>, <em>postprocessor: dict</em>, <em>allow_patch_many: bool</em>, <em>allow_method_override: bool</em>, <em>validation_exceptions</em>, <em>exclude_queries: bool</em>, <em>exclude_hybrids: bool</em>, <em>include_columns: list</em>, <em>exclude_columns: list</em>, <em>results_per_page: int</em>, <em>max_results_per_page: int</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.initialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.initialize" title="Permalink to this definition">¶</a></dt>
 <dd><p>Init of the handler, derives arguments from api create_api_blueprint</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -101,7 +101,7 @@ the instance_id parameter the associated _single / _many method, so you probably
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.get">
-<tt class="descname">get</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.get" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">get</tt><big>(</big><em>instance_id: str=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.get" title="Permalink to this definition">¶</a></dt>
 <dd><p>GET request</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -117,7 +117,7 @@ the instance_id parameter the associated _single / _many method, so you probably
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.get_single">
-<tt class="descname">get_single</tt><big>(</big><em>instance_id</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.get_single"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.get_single" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">get_single</tt><big>(</big><em>instance_id: list</em><big>)</big> &rarr; dict<a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.get_single"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.get_single" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get one instance</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -131,7 +131,7 @@ the instance_id parameter the associated _single / _many method, so you probably
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.get_many">
-<tt class="descname">get_many</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.get_many"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.get_many" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">get_many</tt><big>(</big><big>)</big> &rarr; dict<a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.get_many"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.get_many" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get all instances</p>
 <p>Note that it is possible to provide offset and page as argument then
 it will return instances of the nth page and skip offset items</p>
@@ -158,7 +158,7 @@ it will return instances of the nth page and skip offset items</p>
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.post">
-<tt class="descname">post</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.post"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.post" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">post</tt><big>(</big><em>instance_id: str=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.post"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.post" title="Permalink to this definition">¶</a></dt>
 <dd><p>POST (new input) request</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -178,7 +178,7 @@ it will return instances of the nth page and skip offset items</p>
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.patch">
-<tt class="descname">patch</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.patch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.patch" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">patch</tt><big>(</big><em>instance_id: str=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.patch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.patch" title="Permalink to this definition">¶</a></dt>
 <dd><p>PATCH (update instance) request</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -196,7 +196,7 @@ it will return instances of the nth page and skip offset items</p>
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.patch_single">
-<tt class="descname">patch_single</tt><big>(</big><em>instance_id</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.patch_single"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.patch_single" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">patch_single</tt><big>(</big><em>instance_id: list</em><big>)</big> &rarr; dict<a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.patch_single"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.patch_single" title="Permalink to this definition">¶</a></dt>
 <dd><p>Patch one instance</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -214,7 +214,7 @@ it will return instances of the nth page and skip offset items</p>
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.patch_many">
-<tt class="descname">patch_many</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.patch_many"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.patch_many" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">patch_many</tt><big>(</big><big>)</big> &rarr; dict<a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.patch_many"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.patch_many" title="Permalink to this definition">¶</a></dt>
 <dd><p>Patch many instances</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -232,7 +232,7 @@ it will return instances of the nth page and skip offset items</p>
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.put">
-<tt class="descname">put</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.put"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.put" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">put</tt><big>(</big><em>instance_id: str=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.put"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.put" title="Permalink to this definition">¶</a></dt>
 <dd><p>PUT (update instance) request</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -252,7 +252,7 @@ it will return instances of the nth page and skip offset items</p>
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.delete">
-<tt class="descname">delete</tt><big>(</big><em>instance_id=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.delete" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">delete</tt><big>(</big><em>instance_id: str=None</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.delete" title="Permalink to this definition">¶</a></dt>
 <dd><p>DELETE (delete instance) request</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -270,7 +270,7 @@ it will return instances of the nth page and skip offset items</p>
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.delete_single">
-<tt class="descname">delete_single</tt><big>(</big><em>instance_id</em><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.delete_single"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.delete_single" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">delete_single</tt><big>(</big><em>instance_id: list</em><big>)</big> &rarr; dict<a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.delete_single"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.delete_single" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get one instance</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -286,7 +286,7 @@ it will return instances of the nth page and skip offset items</p>
 
 <dl class="method">
 <dt id="tornado_restless.handler.BaseHandler.delete_many">
-<tt class="descname">delete_many</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.delete_many"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.delete_many" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">delete_many</tt><big>(</big><big>)</big> &rarr; dict<a class="reference internal" href="../_modules/tornado_restless/handler.html#BaseHandler.delete_many"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#tornado_restless.handler.BaseHandler.delete_many" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove many instances</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -361,12 +361,12 @@ it will return instances of the nth page and skip offset items</p>
         <li class="right" >
           <a href="api.html" title="tornado_restless.api – ApiManager"
              >previous</a> |</li>
-        <li><a href="../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">Tornado Restless 0.4.3 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Martin Martimeo et. al..
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

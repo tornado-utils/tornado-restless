@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>tornado_restless.wrapper &mdash; Tornado Restless 0.4.2 documentation</title>
+    <title>tornado_restless.wrapper &mdash; Tornado Restless 0.4.3 documentation</title>
     
     <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '0.4.2',
+        VERSION:     '0.4.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
-    <link rel="top" title="Tornado Restless 0.4.2 documentation" href="../../index.html" />
+    <link rel="top" title="Tornado Restless 0.4.3 documentation" href="../../index.html" />
     <link rel="up" title="Module code" href="../index.html" /> 
   </head>
   <body>
@@ -36,7 +36,7 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Tornado Restless 0.4.3 documentation</a> &raquo;</li>
           <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>  
@@ -55,6 +55,7 @@
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
 <span class="kn">import</span> <span class="nn">inspect</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+
 <span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">inspect</span> <span class="k">as</span> <span class="n">sqinspect</span>
 <span class="kn">from</span> <span class="nn">sqlalchemy.exc</span> <span class="kn">import</span> <span class="n">NoInspectionAvailable</span>
 <span class="kn">from</span> <span class="nn">sqlalchemy.ext.associationproxy</span> <span class="kn">import</span> <span class="n">AssociationProxy</span>
@@ -66,6 +67,7 @@
 <span class="kn">from</span> <span class="nn">sqlalchemy.orm.properties</span> <span class="kn">import</span> <span class="n">RelationshipProperty</span>
 <span class="kn">from</span> <span class="nn">sqlalchemy.sql.operators</span> <span class="kn">import</span> <span class="n">is_ordering_modifier</span>
 <span class="kn">from</span> <span class="nn">sqlalchemy.util</span> <span class="kn">import</span> <span class="n">memoized_property</span>
+
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s">&#39;Martin Martimeo &lt;martin@martimeo.de&gt;&#39;</span>
 <span class="n">__date__</span> <span class="o">=</span> <span class="s">&#39;27.04.13 - 00:14&#39;</span>
@@ -87,9 +89,15 @@
 
     <span class="c"># Try sqlalchemy inspection</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">{</span><span class="n">field</span><span class="o">.</span><span class="n">key</span><span class="p">:</span> <span class="n">field</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">sqinspect</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span><span class="o">.</span><span class="n">all_orm_descriptors</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">condition</span><span class="p">(</span><span class="n">field</span><span class="p">)}</span>
-
+        <span class="n">inspection</span> <span class="o">=</span> <span class="n">sqinspect</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">inspection</span><span class="p">,</span> <span class="s">&quot;all_orm_descriptors&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">{</span><span class="n">field</span><span class="o">.</span><span class="n">key</span><span class="p">:</span> <span class="n">field</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">inspection</span><span class="o">.</span><span class="n">all_orm_descriptors</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">condition</span><span class="p">(</span><span class="n">field</span><span class="p">)}</span>
+        <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">inspection</span><span class="p">,</span> <span class="s">&quot;attrs&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">{</span><span class="n">field</span><span class="o">.</span><span class="n">key</span><span class="p">:</span> <span class="n">field</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">inspection</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">condition</span><span class="p">(</span><span class="n">field</span><span class="p">)}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoInspectionAvailable</span><span class="p">()</span>
     <span class="c"># Use Inspect</span>
     <span class="k">except</span> <span class="n">NoInspectionAvailable</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">{</span><span class="n">field</span><span class="o">.</span><span class="n">key</span><span class="p">:</span> <span class="n">field</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getmembers</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
@@ -142,7 +150,8 @@
 <span class="sd">            Inspired by flask-restless.helpers.primary_key_names</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">_filter</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">field</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">ColumnProperty</span><span class="p">)</span> <span class="ow">and</span> <span class="n">field</span><span class="o">.</span><span class="n">primary_key</span> <span class="ow">or</span> <span class="p">(</span>
-            <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">QueryableAttribute</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="p">,</span> <span class="n">ColumnProperty</span><span class="p">)</span> <span class="ow">and</span> <span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">primary_key</span><span class="p">))</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">QueryableAttribute</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="p">,</span> <span class="n">ColumnProperty</span><span class="p">)</span> <span class="ow">and</span>
+            <span class="nb">hasattr</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s">&#39;primary_key&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">primary_key</span><span class="p">))</span>
 
     <span class="nd">@memoized_property</span>
 <div class="viewcode-block" id="ModelWrapper.primary_keys"><a class="viewcode-back" href="../../api/wrapper.html#tornado_restless.wrapper.ModelWrapper.primary_keys">[docs]</a>    <span class="k">def</span> <span class="nf">primary_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -161,7 +170,8 @@
 <span class="sd">            Inspired by flask-restless.helpers.primary_key_names</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">_filter</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">field</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">ColumnProperty</span><span class="p">)</span> <span class="ow">and</span> <span class="n">field</span><span class="o">.</span><span class="n">unique</span> <span class="ow">or</span> <span class="p">(</span>
-            <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">QueryableAttribute</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="p">,</span> <span class="n">ColumnProperty</span><span class="p">)</span> <span class="ow">and</span> <span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">))</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">QueryableAttribute</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="p">,</span> <span class="n">ColumnProperty</span><span class="p">)</span> <span class="ow">and</span>
+            <span class="nb">hasattr</span><span class="p">(</span><span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s">&#39;unique&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">field</span><span class="o">.</span><span class="n">property</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">))</span>
 
     <span class="nd">@memoized_property</span>
 <div class="viewcode-block" id="ModelWrapper.unique_keys"><a class="viewcode-back" href="../../api/wrapper.html#tornado_restless.wrapper.ModelWrapper.unique_keys">[docs]</a>    <span class="k">def</span> <span class="nf">unique_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -250,10 +260,12 @@
 <span class="sd">            Returns the relations objects of the model</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">Proxy</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span><span class="s">&#39;Proxy&#39;</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;key&#39;</span><span class="p">,</span> <span class="s">&#39;field&#39;</span><span class="p">])</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s">&#39;iterate_properties&#39;</span><span class="p">):</span>
+        <span class="c"># Try sqlalchemy inspection</span>
+        <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[</span><span class="n">Proxy</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">field</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">sqinspect</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span><span class="o">.</span><span class="n">all_orm_descriptors</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">hybrid_property</span><span class="p">)]</span>
-        <span class="k">else</span><span class="p">:</span>
+        <span class="c"># Use Inspect</span>
+        <span class="k">except</span> <span class="n">NoInspectionAvailable</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">[</span><span class="n">Proxy</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">field</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getmembers</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
                     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">field</span><span class="p">,</span> <span class="n">hybrid_property</span><span class="p">)]</span>
 
@@ -300,124 +312,131 @@
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">session</span>
 
-    <span class="k">def</span> <span class="nf">one</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">())</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">            Gets one instance of the model filtered by filters</span>
-
-<span class="sd">            :param offset: Offset for request</span>
-<span class="sd">            :param filters: Filters and OrderBy Clauses</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">expression</span> <span class="ow">in</span> <span class="n">filters</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">_is_ordering_expression</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
-                <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">offset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span><span class="o">.</span><span class="n">one</span><span class="p">()</span>
-
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get_all</span><span class="p">(</span><span class="n">instance</span><span class="p">:</span> <span class="n">Query</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">())</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">            Gets all instances of the query instance</span>
-
-<span class="sd">            :param instance: sqlalchemy queriable</span>
-<span class="sd">            :param offset: Offset for request</span>
-<span class="sd">            :param limit: Limit for request</span>
-<span class="sd">            :param filters: Filters and OrderBy Clauses</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">expression</span> <span class="ow">in</span> <span class="n">filters</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">_apply_kwargs</span><span class="p">(</span><span class="n">instance</span><span class="p">:</span> <span class="n">Query</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Query</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">expression</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;filters&#39;</span><span class="p">,</span> <span class="p">[]):</span>
             <span class="k">if</span> <span class="n">_is_ordering_expression</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
                 <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">offset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">())</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s">&#39;offset&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;offset&#39;</span><span class="p">)</span>
+            <span class="n">foffset</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">foffset</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span>
+
+        <span class="k">if</span> <span class="s">&#39;limit&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">limit</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;limit&#39;</span><span class="p">)</span>
+            <span class="n">flimit</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">flimit</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">instance</span><span class="p">:</span> <span class="n">instance</span>
+
+        <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="n">foffset</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="n">flimit</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">instance</span>
+
+    <span class="k">def</span> <span class="nf">one</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">(),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">            Gets all instances of the model filtered by filters</span>
+<span class="sd">            Gets one instance of the model filtered by filters</span>
 
-<span class="sd">            :param offset: Offset for request</span>
-<span class="sd">            :param limit: Limit for request</span>
 <span class="sd">            :param filters: Filters and OrderBy Clauses</span>
+<span class="sd">            :param kwargs: Additional filters passed to filter_by</span>
+<span class="sd">            :keyword offset: Offset for request</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_all</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="n">offset</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SessionedModelWrapper</span><span class="p">):</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">())</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">SessionedModelWrapper</span><span class="o">.</span><span class="n">_apply_kwargs</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">one</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">all</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">(),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Gets all instances of the query instance</span>
+
+<span class="sd">            :param filters: Filters and OrderBy Clauses</span>
+<span class="sd">            :param kwargs: Additional filters passed to filter_by</span>
+<span class="sd">            :keyword limit: Limit for request</span>
+<span class="sd">            :keyword offset: Offset for request</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SessionedModelWrapper</span><span class="p">):</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="k">return</span> <span class="n">SessionedModelWrapper</span><span class="o">.</span><span class="n">_apply_kwargs</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">(),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Updates all instances of the model filtered by filters</span>
 
 <span class="sd">            :param values: Dictionary of values</span>
-<span class="sd">            :param offset: Offset for request</span>
-<span class="sd">            :param limit: Limit for request</span>
 <span class="sd">            :param filters: Filters and OrderBy Clauses</span>
+<span class="sd">            :param kwargs: Additional filters passed to filter_by</span>
+<span class="sd">            :keyword limit: Limit for request</span>
+<span class="sd">            :keyword offset: Offset for request</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">expression</span> <span class="ow">in</span> <span class="n">filters</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">_is_ordering_expression</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
-                <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">offset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SessionedModelWrapper</span><span class="p">):</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">())</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">SessionedModelWrapper</span><span class="o">.</span><span class="n">_apply_kwargs</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">(),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Delete all instances of the model filtered by filters</span>
 
-<span class="sd">            :param offset: Offset for request</span>
-<span class="sd">            :param limit: Limit for request</span>
+<span class="sd">            :param values: Dictionary of values</span>
 <span class="sd">            :param filters: Filters and OrderBy Clauses</span>
+<span class="sd">            :param kwargs: Additional filters passed to filter_by</span>
+<span class="sd">            :keyword limit: Limit for request</span>
+<span class="sd">            :keyword offset: Offset for request</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">expression</span> <span class="ow">in</span> <span class="n">filters</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">_is_ordering_expression</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
-                <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">offset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">offset</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SessionedModelWrapper</span><span class="p">):</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">())</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">SessionedModelWrapper</span><span class="o">.</span><span class="n">_apply_kwargs</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filters</span><span class="p">:</span> <span class="nb">list</span><span class="o">=</span><span class="p">(),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Gets the instance count</span>
 
 <span class="sd">            :param filters: Filters and OrderBy Clauses</span>
+<span class="sd">            :param kwargs: Additional filters passed to filter_by</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">expression</span> <span class="ow">in</span> <span class="n">filters</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">_is_ordering_expression</span><span class="p">(</span><span class="n">expression</span><span class="p">):</span>
-                <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">instance</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SessionedModelWrapper</span><span class="p">):</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance_id</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">SessionedModelWrapper</span><span class="o">.</span><span class="n">_apply_kwargs</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">filters</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">pargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Gets one instance of the model based on primary_keys</span>
 
-<span class="sd">            :param instance_id: list of primary_keys</span>
+<span class="sd">            :param pargs: ident</span>
+<span class="sd">            :raise NoResultFound: If no element has been received</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">instance_id</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">primary_keys</span> <span class="o">=</span> <span class="n">instance_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">SessionedModelWrapper</span><span class="p">):</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">primary_keys</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">instance_id</span><span class="p">)</span>
-        <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">primary_keys</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">instance</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">NoResultFound</span><span class="p">(</span><span class="s">&quot;No row was found for get()&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">instance</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pargs</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">rtn</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="o">*</span><span class="n">pargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rtn</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rtn</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoResultFound</span><span class="p">(</span><span class="s">&quot;No element recieved for </span><span class="si">%s</span><span class="s">(</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__collectionname__</span><span class="p">,</span> <span class="n">pargs</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">rtn</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">()</span>
@@ -458,13 +477,13 @@
         <li class="right" >
           <a href="../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../index.html">Tornado Restless 0.4.2 documentation</a> &raquo;</li>
+        <li><a href="../../index.html">Tornado Restless 0.4.3 documentation</a> &raquo;</li>
           <li><a href="../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Martin Martimeo et. al..
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>
