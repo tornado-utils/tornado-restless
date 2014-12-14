@@ -4,6 +4,7 @@
 
 """
 from datetime import datetime, date, time
+from decimal import Decimal
 import collections
 import itertools
 
@@ -20,6 +21,7 @@ __date__ = '23.05.13 - 17:41'
 
 __datetypes__ = (datetime, time, date)
 __basetypes__ = (str, int, bool, float)
+__clsztypes__ = (Decimal, )
 
 
 def to_filter(instance,
@@ -219,6 +221,11 @@ def to_dict(instance,
     # Any List
     if isinstance(instance, list) or hasattr(instance, '__iter__'):
         return [to_dict(x, options=options, include=include, exclude=exclude) for x in instance]
+
+    # Additional classes:
+    #  - decimal.Decimal: created by sqlalchemy.automap/reflect
+    if isinstance(instance, __clsztypes__):
+        return str(instance)
 
     # Include Columns given
     if isinstance(include, collections.Iterable):
