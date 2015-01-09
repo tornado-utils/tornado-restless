@@ -74,6 +74,7 @@ def to_filter(instance,
             left = getattr(instance, relation)
             op = "has"
             argument_filter["name"] = name
+            argument_filter["op"] = "eq"
             right = to_filter(instance=left.property.mapper.class_, filters=[argument_filter])
         elif argument_filter["name"] == "~":
             left = instance
