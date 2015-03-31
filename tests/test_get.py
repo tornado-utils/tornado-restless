@@ -148,3 +148,22 @@ class TestGet(TestBase):
         """
 
         self.curl_tornado('/api/persons/1337', assert_for=400)
+
+    def test_relation(self):
+        params = {
+            'q': json.dumps({'filters': [{'name': 'cities._city', 'op': 'any', 'val': 60400}]})
+        }
+        tornado_data = self.curl_tornado('/api/persons', params=params)
+        assert len(tornado_data['objects']) == 2
+
+        params = {
+            'q': json.dumps({'filters': [{'name': 'cities._city', 'op': 'any', 'val': 10800}]})
+        }
+        tornado_data = self.curl_tornado('/api/persons', params=params)
+        assert len(tornado_data['objects']) == 1
+
+        params = {
+            'q': json.dumps({'filters': [{'name': 'cities._city', 'op': 'any', 'val': 123}]})
+        }
+        tornado_data = self.curl_tornado('/api/persons', params=params)
+        assert len(tornado_data['objects']) == 0
