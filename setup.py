@@ -23,7 +23,7 @@ setup(
     install_requires=open('requirements.txt').readlines(),
     test_suite='nose.collector',
     tests_require=open('requirements-test.txt').readlines(),
-    download_url='https://github.com/tornado-utils/tornado-restless/tarball/0.4.4',
+    download_url='https://github.com/tornado-utils/tornado-restless/tarball/%s' % __version__,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
